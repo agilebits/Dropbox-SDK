@@ -5,35 +5,14 @@
 //  Created by Brian Smith on 4/9/10.
 //  Copyright 2010 Dropbox, Inc. All rights reserved.
 //
-
+//	March 2012. Roustem Karimov. Changed DBRequest to subclass NSOperation
 
 @protocol DBNetworkRequestDelegate;
 
 /* DBRestRequest will download a URL either into a file that you provied the name to or it will
    create an NSData object with the result. When it has completed downloading the URL, it will
    notify the target with a selector that takes the DBRestRequest as the only parameter. */
-@interface DBRequest : NSObject {
-    NSURLRequest* request;
-    id target;
-    SEL selector;
-    NSURLConnection* urlConnection;
-    NSFileHandle* fileHandle;
-
-    SEL failureSelector;
-    SEL downloadProgressSelector;
-    SEL uploadProgressSelector;
-    NSString* resultFilename;
-    NSString* tempFilename;
-    NSDictionary* userInfo;
-
-    NSHTTPURLResponse* response;
-    NSDictionary* xDropboxMetadataJSON;
-    NSInteger bytesDownloaded;
-    CGFloat downloadProgress;
-    CGFloat uploadProgress;
-    NSMutableData* resultData;
-    NSError* error;
-}
+@interface DBRequest : NSOperation
 
 /*  Set this to get called when _any_ request starts or stops. This should hook into whatever
     network activity indicator system you have. */
@@ -65,6 +44,13 @@
 @property (nonatomic, readonly) NSString* resultString;
 @property (nonatomic, readonly) NSObject* resultJSON;
 @property (nonatomic, readonly) NSError* error;
+
+// NSOperation methods
+
+- (void)start;
+- (BOOL)isConcurrent;
+- (BOOL)isExecuting;
+- (BOOL)isFinished;
 
 @end
 

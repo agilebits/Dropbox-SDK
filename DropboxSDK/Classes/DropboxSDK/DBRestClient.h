@@ -13,18 +13,11 @@
 @class DBAccountInfo;
 @class DBMetadata;
 
-@interface DBRestClient : NSObject {
-    DBSession* session;
-    NSString* userId;
-    NSString* root;
-    NSMutableSet* requests;
-    /* Map from path to the load request. Needs to be expanded to a general framework for cancelling
-       requests. */
-    NSMutableDictionary* loadRequests;
-    NSMutableDictionary* imageLoadRequests;
-    NSMutableDictionary* uploadRequests;
-    id<DBRestClientDelegate> delegate;
-}
+@interface DBRestClient : NSObject 
+
+@property (nonatomic, assign) id<DBRestClientDelegate> delegate;
+@property (nonatomic) NSInteger maxConcurrentConnectionCount;
+
 
 - (id)initWithSession:(DBSession*)session;
 - (id)initWithSession:(DBSession *)session userId:(NSString *)userId;
@@ -94,8 +87,6 @@
 - (void)loadStreamableURLForFile:(NSString *)path;
 
 - (NSUInteger)requestCount;
-
-@property (nonatomic, assign) id<DBRestClientDelegate> delegate;
 
 @end
 

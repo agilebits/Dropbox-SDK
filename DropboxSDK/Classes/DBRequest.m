@@ -15,7 +15,29 @@
 static id networkRequestDelegate = nil;
 
 
-@interface DBRequest ()
+@interface DBRequest () {
+    NSURLRequest* request;
+	BOOL finished;
+    id target;
+    SEL selector;
+    NSURLConnection* urlConnection;
+    NSFileHandle* fileHandle;
+	
+    SEL failureSelector;
+    SEL downloadProgressSelector;
+    SEL uploadProgressSelector;
+    NSString* resultFilename;
+    NSString* tempFilename;
+    NSDictionary* userInfo;
+	
+    NSHTTPURLResponse* response;
+    NSDictionary* xDropboxMetadataJSON;
+    NSInteger bytesDownloaded;
+    CGFloat downloadProgress;
+    CGFloat uploadProgress;
+    NSMutableData* resultData;
+    NSError* error;
+}
 
 - (void)setError:(NSError *)error;
 
@@ -23,6 +45,19 @@ static id networkRequestDelegate = nil;
 
 
 @implementation DBRequest
+
+@synthesize failureSelector;
+@synthesize downloadProgressSelector;
+@synthesize uploadProgressSelector;
+@synthesize userInfo;
+@synthesize request;
+@synthesize response;
+@synthesize xDropboxMetadataJSON;
+@synthesize downloadProgress;
+@synthesize uploadProgress;
+@synthesize resultData;
+@synthesize resultFilename;
+@synthesize error;
 
 + (void)setNetworkRequestDelegate:(id<DBNetworkRequestDelegate>)delegate {
     networkRequestDelegate = delegate;
@@ -33,9 +68,6 @@ static id networkRequestDelegate = nil;
         request = [aRequest retain];
         target = aTarget;
         selector = aSelector;
-        
-        urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-        [networkRequestDelegate networkRequestStarted];
     }
     return self;
 }
@@ -56,18 +88,11 @@ static id networkRequestDelegate = nil;
     [super dealloc];
 }
 
-@synthesize failureSelector;
-@synthesize downloadProgressSelector;
-@synthesize uploadProgressSelector;
-@synthesize userInfo;
-@synthesize request;
-@synthesize response;
-@synthesize xDropboxMetadataJSON;
-@synthesize downloadProgress;
-@synthesize uploadProgress;
-@synthesize resultData;
-@synthesize resultFilename;
-@synthesize error;
+- (void)networkRequestStopped {
+	finished = YES;
+	[urlConnection release], urlConnection = nil;
+    [networkRequestDelegate networkRequestStopped];
+}
 
 - (NSString*)resultString {
     return [[[NSString alloc] 
@@ -111,7 +136,7 @@ static id networkRequestDelegate = nil;
         }
     }
     
-    [networkRequestDelegate networkRequestStopped];
+	[self networkRequestStopped];
 }
 
 - (id)parseResponseAsType:(Class)cls {
@@ -124,7 +149,7 @@ static id networkRequestDelegate = nil;
     return res;
 }
 
-#pragma mark NSURLConnection delegate methods
+#pragma mark - NSURLConnection delegate methods
 
 - (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)aResponse {
     response = [(NSHTTPURLResponse*)aResponse retain];
@@ -154,7 +179,8 @@ static id networkRequestDelegate = nil;
     if (resultFilename && [self statusCode] == 200) {
         @try {
             [fileHandle writeData:data];
-        } @catch (NSException* e) {
+        } 
+		@catch (NSException* e) {
             // In case we run out of disk space
             [urlConnection cancel];
             [fileHandle closeFile];
@@ -164,11 +190,12 @@ static id networkRequestDelegate = nil;
             SEL sel = failureSelector ? failureSelector : selector;
             [target performSelector:sel withObject:self];
             
-            [networkRequestDelegate networkRequestStopped];
+			[self networkRequestStopped];
             
             return;
         }
-    } else {
+    } 
+	else {
         if (resultData == nil) {
             resultData = [NSMutableData new];
         }
@@ -205,12 +232,14 @@ static id networkRequestDelegate = nil;
                 if ([resultJSON isKindOfClass:[NSDictionary class]]) {
                     [errorUserInfo addEntriesFromDictionary:(NSDictionary*)resultJSON];
                 }
-            } @catch (NSException* e) {
+            } 
+			@catch (NSException* e) {
                 [errorUserInfo setObject:resultString forKey:@"errorMessage"];
             }
         }
         [self setError:[NSError errorWithDomain:DBErrorDomain code:self.statusCode userInfo:errorUserInfo]];
-    } else if (tempFilename) {
+    } 
+	else if (tempFilename) {
         NSFileManager* fileManager = [[NSFileManager new] autorelease];
         NSError* moveError;
         
@@ -221,11 +250,13 @@ static id networkRequestDelegate = nil;
             DBLogError(@"DBRequest#connectionDidFinishLoading: error getting file attrs: %@", moveError);
             [fileManager removeItemAtPath:tempFilename error:nil];
             [self setError:[NSError errorWithDomain:moveError.domain code:moveError.code userInfo:self.userInfo]];
-        } else if ([self responseBodySize] != 0 && [self responseBodySize] != [fileAttrs fileSize]) {
+        } 
+		else if ([self responseBodySize] != 0 && [self responseBodySize] != [fileAttrs fileSize]) {
             // This happens in iOS 4.0 when the network connection changes while loading
             [fileManager removeItemAtPath:tempFilename error:nil];
             [self setError:[NSError errorWithDomain:DBErrorDomain code:DBErrorGenericError userInfo:self.userInfo]];
-        } else {        
+        } 
+		else {        
             // Everything's OK, move temp file over to desired file
             [fileManager removeItemAtPath:resultFilename error:nil];
             
@@ -243,8 +274,8 @@ static id networkRequestDelegate = nil;
     
     SEL sel = (error && failureSelector) ? failureSelector : selector;
     [target performSelector:sel withObject:self];
-    
-    [networkRequestDelegate networkRequestStopped];
+
+    [self networkRequestStopped];
 }
 
 - (void)connection:(NSURLConnection*)connection didFailWithError:(NSError*)anError {
@@ -269,7 +300,7 @@ static id networkRequestDelegate = nil;
     SEL sel = failureSelector ? failureSelector : selector;
     [target performSelector:sel withObject:self];
 
-    [networkRequestDelegate networkRequestStopped];
+	[self networkRequestStopped];
 }
 
 - (void)connection:(NSURLConnection*)connection didSendBodyData:(NSInteger)bytesWritten 
@@ -287,7 +318,27 @@ static id networkRequestDelegate = nil;
 }
 
 
-#pragma mark private methods
+#pragma mark - NSOperation methods
+
+- (void)start {
+	urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
+	[networkRequestDelegate networkRequestStarted];
+}
+
+- (BOOL)isConcurrent {
+	return YES;
+}
+
+- (BOOL)isExecuting {
+	return urlConnection != nil;
+}
+
+- (BOOL)isFinished {
+	return finished;
+}
+
+
+#pragma mark - private methods
 
 - (void)setError:(NSError *)theError {
     if (theError == error) return;
