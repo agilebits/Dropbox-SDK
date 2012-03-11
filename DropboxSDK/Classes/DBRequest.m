@@ -9,7 +9,6 @@
 #import "DBRequest.h"
 #import "DBLog.h"
 #import "DBError.h"
-#import "JSON.h"
 
 static id networkRequestDelegate = nil;
 
@@ -96,7 +95,13 @@ static id networkRequestDelegate = nil;
 }
 
 - (NSObject*)resultJSON {
-    return [[self resultString] JSONValue];
+	NSError *jsonError = nil;
+	NSObject *result = [NSJSONSerialization JSONObjectWithData:resultData options:NSJSONReadingMutableContainers error:&jsonError];
+	if (!result && jsonError) {
+		NSLog(@"Failed to parse JSON: %@", jsonError);
+	}
+	
+	return result;
 } 
 
 - (NSInteger)statusCode {
@@ -150,7 +155,11 @@ static id networkRequestDelegate = nil;
     response = (NSHTTPURLResponse*)aResponse;
 
     // Parse out the x-response-metadata as JSON.
-    xDropboxMetadataJSON = [[[response allHeaderFields] objectForKey:@"X-Dropbox-Metadata"] JSONValue];
+	NSString *xDropboxMetadataString = [[response allHeaderFields] objectForKey:@"X-Dropbox-Metadata"];
+	if ([xDropboxMetadataString length] > 1) {
+		NSData *xDropboxMetadataData = [NSData dataWithBytes:[xDropboxMetadataString UTF8String] length:[xDropboxMetadataString lengthOfBytesUsingEncoding:NSUTF8StringEncoding]];
+		xDropboxMetadataJSON = [NSJSONSerialization JSONObjectWithData:xDropboxMetadataData options:NSJSONReadingMutableContainers error:nil];
+	}
 
     if (resultFilename && [self statusCode] == 200) {
         // Create the file here so it's created in case it's zero length
@@ -221,18 +230,14 @@ static id networkRequestDelegate = nil;
         NSMutableDictionary* errorUserInfo = [NSMutableDictionary dictionaryWithDictionary:userInfo];
         // To get error userInfo, first try and make sense of the response as JSON, if that
         // fails then send back the string as an error message
-        NSString* resultString = [self resultString];
-        if ([resultString length] > 0) {
-            @try {
-                DBJsonParser *jsonParser = [DBJsonParser new];
-                NSObject* resultJSON = [jsonParser objectWithString:resultString];
-                
-                if ([resultJSON isKindOfClass:[NSDictionary class]]) {
-                    [errorUserInfo addEntriesFromDictionary:(NSDictionary*)resultJSON];
-                }
-            } 
-			@catch (NSException* e) {
-                [errorUserInfo setObject:resultString forKey:@"errorMessage"];
+        if ([resultData length] > 0) {
+			NSError *jsonError = nil;
+			NSDictionary *resultJSON = [NSJSONSerialization JSONObjectWithData:resultData options:NSJSONReadingMutableContainers error:&jsonError];
+			if ([resultJSON isKindOfClass:[NSDictionary class]]) {
+				[errorUserInfo addEntriesFromDictionary:resultJSON];
+			}
+			else {
+                [errorUserInfo setObject:[self resultString] forKey:@"errorMessage"];
             }
         }
         [self setError:[NSError errorWithDomain:DBErrorDomain code:self.statusCode userInfo:errorUserInfo]];
