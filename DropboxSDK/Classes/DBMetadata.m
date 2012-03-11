@@ -16,11 +16,11 @@
     
     NSDateFormatter* dateFormatter = [dictionary objectForKey:dateFormatterKey];
     if (dateFormatter == nil) {
-        dateFormatter = [[NSDateFormatter new] autorelease];
+        dateFormatter = [NSDateFormatter new];
         // Must set locale to ensure consistent parsing:
         // http://developer.apple.com/iphone/library/qa/qa2010/qa1480.html
         dateFormatter.locale = 
-            [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
+            [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
         dateFormatter.dateFormat = @"EEE, dd MMM yyyy HH:mm:ss Z";
         [dictionary setObject:dateFormatter forKey:dateFormatterKey];
     }
@@ -34,10 +34,10 @@
 
         if ([dict objectForKey:@"modified"]) {
             lastModifiedDate = 
-                [[[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"modified"]] retain];
+                [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"modified"]];
         }
 
-        path = [[dict objectForKey:@"path"] retain];
+        path = [dict objectForKey:@"path"];
         isDirectory = [[dict objectForKey:@"is_dir"] boolValue];
         
         if ([dict objectForKey:@"contents"]) {
@@ -47,34 +47,21 @@
             for (NSDictionary* subfileDict in subfileDicts) {
                 DBMetadata* subfile = [[DBMetadata alloc] initWithDictionary:subfileDict];
                 [mutableContents addObject:subfile];
-                [subfile release];
             }
             contents = mutableContents;
         }
         
-        hash = [[dict objectForKey:@"hash"] retain];
-        humanReadableSize = [[dict objectForKey:@"size"] retain];
-        root = [[dict objectForKey:@"root"] retain];
-        icon = [[dict objectForKey:@"icon"] retain];
-        rev = [[dict objectForKey:@"rev"] retain];
+        hash = [dict objectForKey:@"hash"];
+        humanReadableSize = [dict objectForKey:@"size"];
+        root = [dict objectForKey:@"root"];
+        icon = [dict objectForKey:@"icon"];
+        rev = [dict objectForKey:@"rev"];
         revision = [[dict objectForKey:@"revision"] longLongValue];
         isDeleted = [[dict objectForKey:@"is_deleted"] boolValue];
     }
     return self;
 }
 
-- (void)dealloc {
-    [lastModifiedDate release];
-    [path release];
-    [contents release];
-    [hash release];
-    [humanReadableSize release];
-    [root release];
-    [icon release];
-    [rev release];
-    [filename release];
-    [super dealloc];
-}
 
 @synthesize thumbnailExists;
 @synthesize totalBytes;
@@ -99,7 +86,7 @@
 
 - (NSString *)filename {
     if (filename == nil) {
-        filename = [[path lastPathComponent] retain];
+        filename = [path lastPathComponent];
     }
     return filename;
 }
@@ -110,15 +97,15 @@
     if ((self = [super init])) {
         thumbnailExists = [coder decodeBoolForKey:@"thumbnailExists"];
         totalBytes = [coder decodeInt64ForKey:@"totalBytes"];
-        lastModifiedDate = [[coder decodeObjectForKey:@"lastModifiedDate"] retain];
-        path = [[coder decodeObjectForKey:@"path"] retain];
+        lastModifiedDate = [coder decodeObjectForKey:@"lastModifiedDate"];
+        path = [coder decodeObjectForKey:@"path"];
         isDirectory = [coder decodeBoolForKey:@"isDirectory"];
-        contents = [[coder decodeObjectForKey:@"contents"] retain];
-        hash = [[coder decodeObjectForKey:@"hash"] retain];
-        humanReadableSize = [[coder decodeObjectForKey:@"humanReadableSize"] retain];
-        root = [[coder decodeObjectForKey:@"root"] retain];
-        icon = [[coder decodeObjectForKey:@"icon"] retain];
-        rev = [[coder decodeObjectForKey:@"rev"] retain];
+        contents = [coder decodeObjectForKey:@"contents"];
+        hash = [coder decodeObjectForKey:@"hash"];
+        humanReadableSize = [coder decodeObjectForKey:@"humanReadableSize"];
+        root = [coder decodeObjectForKey:@"root"];
+        icon = [coder decodeObjectForKey:@"icon"];
+        rev = [coder decodeObjectForKey:@"rev"];
         revision = [coder decodeInt64ForKey:@"revision"];
         isDeleted = [coder decodeBoolForKey:@"isDeleted"];
     }

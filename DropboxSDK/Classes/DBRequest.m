@@ -11,9 +11,7 @@
 #import "DBError.h"
 #import "JSON.h"
 
-
 static id networkRequestDelegate = nil;
-
 
 @interface DBRequest () {
     NSURLRequest* request;
@@ -65,7 +63,7 @@ static id networkRequestDelegate = nil;
 
 - (id)initWithURLRequest:(NSURLRequest*)aRequest andInformTarget:(id)aTarget selector:(SEL)aSelector {
     if ((self = [super init])) {
-        request = [aRequest retain];
+        request = aRequest;
         target = aTarget;
         selector = aSelector;
     }
@@ -75,29 +73,26 @@ static id networkRequestDelegate = nil;
 - (void) dealloc {
     [urlConnection cancel];
     
-    [request release];
-    [urlConnection release];
-    [fileHandle release];
-    [userInfo release];
-    [response release];
-    [xDropboxMetadataJSON release];
-    [resultFilename release];
-    [tempFilename release];
-    [resultData release];
-    [error release];
-    [super dealloc];
 }
 
 - (void)networkRequestStopped {
+	[self willChangeValueForKey:@"isExecuting"];
+	[self willChangeValueForKey:@"isFinished"];
+	
 	finished = YES;
-	[urlConnection release], urlConnection = nil;
+	urlConnection = nil;
     [networkRequestDelegate networkRequestStopped];
+	
+//	[[NSRunLoop currentRunLoop] removePort:port forMode:NSRunLoopCommonModes];
+//	[[NSRunLoop currentRunLoop] stop];
+	
+	[self didChangeValueForKey:@"isFinished"];
+	[self didChangeValueForKey:@"isExecuting"];
 }
 
 - (NSString*)resultString {
-    return [[[NSString alloc] 
-             initWithData:resultData encoding:NSUTF8StringEncoding]
-            autorelease];
+    return [[NSString alloc] 
+             initWithData:resultData encoding:NSUTF8StringEncoding];
 }
 
 - (NSObject*)resultJSON {
@@ -152,26 +147,25 @@ static id networkRequestDelegate = nil;
 #pragma mark - NSURLConnection delegate methods
 
 - (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)aResponse {
-    response = [(NSHTTPURLResponse*)aResponse retain];
+    response = (NSHTTPURLResponse*)aResponse;
 
     // Parse out the x-response-metadata as JSON.
-    xDropboxMetadataJSON = [[[[response allHeaderFields] objectForKey:@"X-Dropbox-Metadata"] JSONValue] retain];
+    xDropboxMetadataJSON = [[[response allHeaderFields] objectForKey:@"X-Dropbox-Metadata"] JSONValue];
 
     if (resultFilename && [self statusCode] == 200) {
         // Create the file here so it's created in case it's zero length
         // File is downloaded into a temporary file and then moved over when completed successfully
         NSString* filename = 
             [NSString stringWithFormat:@"%.0f", 1000*[NSDate timeIntervalSinceReferenceDate]];
-        tempFilename = [[NSTemporaryDirectory() stringByAppendingPathComponent:filename] retain];
+        tempFilename = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
         
-        NSFileManager* fileManager = [[NSFileManager new] autorelease];
+        NSFileManager* fileManager = [NSFileManager new];
         BOOL success = [fileManager createFileAtPath:tempFilename contents:nil attributes:nil];
         if (!success) {
-            DBLogError(@"DBRequest#connection:didReceiveData: Error creating file at path: %@", 
-                       tempFilename);
+            DBLogError(@"DBRequest#connection:didReceiveData: Error creating file at path: %@", tempFilename);
         }
 
-        fileHandle = [[NSFileHandle fileHandleForWritingAtPath:tempFilename] retain];
+        fileHandle = [NSFileHandle fileHandleForWritingAtPath:tempFilename];
     }
 }
 
@@ -187,8 +181,11 @@ static id networkRequestDelegate = nil;
             [[NSFileManager defaultManager] removeItemAtPath:tempFilename error:nil];
             [self setError:[NSError errorWithDomain:DBErrorDomain code:DBErrorInsufficientDiskSpace userInfo:userInfo]];
             
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
             SEL sel = failureSelector ? failureSelector : selector;
             [target performSelector:sel withObject:self];
+#pragma clang diagnostic pop
             
 			[self networkRequestStopped];
             
@@ -208,14 +205,16 @@ static id networkRequestDelegate = nil;
     if (responseBodySize > 0) {
         downloadProgress = (CGFloat)bytesDownloaded / (CGFloat)responseBodySize;
         if (downloadProgressSelector) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
             [target performSelector:downloadProgressSelector withObject:self];
+#pragma clang diagnostic pop
         }
     }
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection*)connection {
     [fileHandle closeFile];
-    [fileHandle release];
     fileHandle = nil;
     
     if (self.statusCode != 200) {
@@ -227,7 +226,6 @@ static id networkRequestDelegate = nil;
             @try {
                 DBJsonParser *jsonParser = [DBJsonParser new];
                 NSObject* resultJSON = [jsonParser objectWithString:resultString];
-                [jsonParser release];
                 
                 if ([resultJSON isKindOfClass:[NSDictionary class]]) {
                     [errorUserInfo addEntriesFromDictionary:(NSDictionary*)resultJSON];
@@ -240,7 +238,7 @@ static id networkRequestDelegate = nil;
         [self setError:[NSError errorWithDomain:DBErrorDomain code:self.statusCode userInfo:errorUserInfo]];
     } 
 	else if (tempFilename) {
-        NSFileManager* fileManager = [[NSFileManager new] autorelease];
+        NSFileManager* fileManager = [NSFileManager new];
         NSError* moveError;
         
         // Check that the file size is the same as the Content-Length
@@ -268,12 +266,14 @@ static id networkRequestDelegate = nil;
             }
         }
         
-        [tempFilename release];
         tempFilename = nil;
     }
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
     SEL sel = (error && failureSelector) ? failureSelector : selector;
     [target performSelector:sel withObject:self];
+#pragma clang diagnostic pop
 
     [self networkRequestStopped];
 }
@@ -286,19 +286,21 @@ static id networkRequestDelegate = nil;
     uploadProgress = 0;
     
     if (tempFilename) {
-        NSFileManager* fileManager = [[NSFileManager new] autorelease];
+        NSFileManager* fileManager = [NSFileManager new];
         NSError* removeError;
         BOOL success = [fileManager removeItemAtPath:tempFilename error:&removeError];
         if (!success) {
             DBLogError(@"DBRequest#connection:didFailWithError: error removing temporary file: %@", 
                     [removeError localizedDescription]);
         }
-        [tempFilename release];
         tempFilename = nil;
     }
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
     SEL sel = failureSelector ? failureSelector : selector;
     [target performSelector:sel withObject:self];
+#pragma clang diagnostic pop
 
 	[self networkRequestStopped];
 }
@@ -307,10 +309,13 @@ static id networkRequestDelegate = nil;
     totalBytesWritten:(NSInteger)totalBytesWritten 
     totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite {
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
     uploadProgress = (CGFloat)totalBytesWritten / (CGFloat)totalBytesExpectedToWrite;
     if (uploadProgressSelector) {
         [target performSelector:uploadProgressSelector withObject:self];
     }
+#pragma clang diagnostic pop
 }
 
 - (NSCachedURLResponse *)connection:(NSURLConnection *)connection willCacheResponse:(NSCachedURLResponse *)response {
@@ -321,8 +326,17 @@ static id networkRequestDelegate = nil;
 #pragma mark - NSOperation methods
 
 - (void)start {
+	[self willChangeValueForKey:@"isExecuting"];
+	
+	NSRunLoop *runLoop = [NSRunLoop mainRunLoop];
+	
 	urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
+	[urlConnection scheduleInRunLoop:runLoop forMode:NSRunLoopCommonModes];
+	[urlConnection start];
+	
 	[networkRequestDelegate networkRequestStarted];
+	
+	[self didChangeValueForKey:@"isExecuting"];
 }
 
 - (BOOL)isConcurrent {
@@ -342,8 +356,7 @@ static id networkRequestDelegate = nil;
 
 - (void)setError:(NSError *)theError {
     if (theError == error) return;
-    [error release];
-    error = [theError retain];
+    error = theError;
 
 	NSString *errorStr = [error.userInfo objectForKey:@"error"];
 	if (!errorStr) {

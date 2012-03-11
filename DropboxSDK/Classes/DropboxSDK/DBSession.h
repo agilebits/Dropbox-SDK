@@ -29,7 +29,7 @@ extern NSString *kDBProtocolHTTPS;
     NSDictionary *baseCredentials;
     NSMutableDictionary *credentialStores;
     NSString *root;
-    id<DBSessionDelegate> delegate;
+    id<DBSessionDelegate> __unsafe_unretained delegate;
 }
 
 + (DBSession*)sharedSession;
@@ -49,8 +49,8 @@ extern NSString *kDBProtocolHTTPS;
 - (void)updateAccessToken:(NSString *)token accessTokenSecret:(NSString *)secret forUserId:(NSString *)userId;
 
 @property (nonatomic, readonly) NSString *root;
-@property (nonatomic, readonly) NSArray *userIds;
-@property (nonatomic, assign) id<DBSessionDelegate> delegate;
+@property (weak, nonatomic, readonly) NSArray *userIds;
+@property (nonatomic, unsafe_unretained) id<DBSessionDelegate> delegate;
 
 @end
 

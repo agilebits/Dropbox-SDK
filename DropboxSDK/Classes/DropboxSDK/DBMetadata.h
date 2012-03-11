@@ -40,6 +40,6 @@
 @property (nonatomic, readonly) long long revision; // Deprecated, use rev instead
 @property (nonatomic, readonly) NSString* rev;
 @property (nonatomic, readonly) BOOL isDeleted;
-@property (nonatomic, readonly) NSString* filename;
+@property (weak, nonatomic, readonly) NSString* filename;
 
 @end

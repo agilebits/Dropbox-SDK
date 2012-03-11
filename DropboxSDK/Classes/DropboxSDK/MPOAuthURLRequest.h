@@ -17,10 +17,10 @@
 	NSMutableArray	*_parameters;
 }
 
-@property (nonatomic, readwrite, retain) NSURL *url;
-@property (nonatomic, readwrite, retain) NSString *HTTPMethod;
-@property (nonatomic, readonly, retain) NSURLRequest *urlRequest;
-@property (nonatomic, readwrite, retain) NSMutableArray *parameters;
+@property (nonatomic, strong) NSURL *url;
+@property (nonatomic, strong) NSString *HTTPMethod;
+@property (nonatomic, readonly) NSURLRequest *urlRequest;
+@property (nonatomic, strong) NSMutableArray *parameters;
 
 - (id)initWithURL:(NSURL *)inURL andParameters:(NSArray *)parameters;
 - (id)initWithURLRequest:(NSURLRequest *)inRequest;

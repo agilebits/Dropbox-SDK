@@ -15,7 +15,7 @@
 
 @interface DBRestClient : NSObject 
 
-@property (nonatomic, assign) id<DBRestClientDelegate> delegate;
+@property (nonatomic, unsafe_unretained) id<DBRestClientDelegate> delegate;
 @property (nonatomic) NSInteger maxConcurrentConnectionCount;
 
 

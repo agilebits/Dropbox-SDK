@@ -13,25 +13,17 @@
 
 - (id)initWithDictionary:(NSDictionary*)dict {
     if ((self = [super init])) {
-        country = [[dict objectForKey:@"country"] retain];
-        displayName = [[dict objectForKey:@"display_name"] retain];
+        country = [dict objectForKey:@"country"];
+        displayName = [dict objectForKey:@"display_name"];
         if ([dict objectForKey:@"quota_info"]) {
             quota = [[DBQuota alloc] initWithDictionary:[dict objectForKey:@"quota_info"]];
         }
-        userId = [[[dict objectForKey:@"uid"] stringValue] retain];
-        referralLink = [[dict objectForKey:@"referral_link"] retain];
+        userId = [[dict objectForKey:@"uid"] stringValue];
+        referralLink = [dict objectForKey:@"referral_link"];
     }
     return self;
 }
 
-- (void)dealloc {
-    [country release];
-    [displayName release];
-    [quota release];
-    [userId release];
-    [referralLink release];
-    [super dealloc];
-}
 
 @synthesize country;
 @synthesize displayName;
@@ -52,11 +44,11 @@
 
 - (id)initWithCoder:(NSCoder*)coder {
     self = [super init];
-    country = [[coder decodeObjectForKey:@"country"] retain];
-    displayName = [[coder decodeObjectForKey:@"displayName"] retain];
-    quota = [[coder decodeObjectForKey:@"quota"] retain];
-    userId = [[coder decodeObjectForKey:@"userId"] retain];
-    referralLink = [[coder decodeObjectForKey:@"referralLink"] retain];
+    country = [coder decodeObjectForKey:@"country"];
+    displayName = [coder decodeObjectForKey:@"displayName"];
+    quota = [coder decodeObjectForKey:@"quota"];
+    userId = [coder decodeObjectForKey:@"userId"];
+    referralLink = [coder decodeObjectForKey:@"referralLink"];
     return self;
 }
 

@@ -15,7 +15,7 @@
 
 + (NSDictionary *)dictionaryWithQueryString:(NSString *)query {
     NSArray *pairs = [query componentsSeparatedByString:@"&"];
-    NSMutableDictionary *params = [[[NSMutableDictionary alloc] init] autorelease];
+    NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
     for (NSString *pair in pairs) {
         NSArray *kv = [pair componentsSeparatedByString:@"="];
         NSString *val =
@@ -31,18 +31,16 @@
     NSMutableString *str = [NSMutableString stringWithString:@""];
     for (id key in self) {
         CFStringRef escapeChars = (CFStringRef)@"!*'\"();:@&=+$,/?%#[]% ";
-        CFStringRef sKey = (CFStringRef)[key description];
-        NSString *eKey = (NSString *)CFURLCreateStringByAddingPercentEscapes(
+        CFStringRef sKey = (__bridge CFStringRef)[key description];
+        NSString *eKey = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(
             NULL, sKey, NULL, escapeChars, kCFStringEncodingUTF8);
-        CFStringRef sVal = (CFStringRef)[[self objectForKey:key] description];
-        NSString *eVal = (NSString *)CFURLCreateStringByAddingPercentEscapes(
+        CFStringRef sVal = (__bridge CFStringRef)[[self objectForKey:key] description];
+        NSString *eVal = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(
             NULL, sVal, NULL, escapeChars, kCFStringEncodingUTF8);
         if ([str length] > 0) {
             [str appendString:@"&"];
         }
         [str appendFormat:@"%@=%@", eKey, eVal];
-        [eKey release];
-        [eVal release];
     }
     return str;
 }

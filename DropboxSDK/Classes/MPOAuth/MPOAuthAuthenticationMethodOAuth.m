@@ -28,11 +28,6 @@ NSString * const MPOAuthCredentialAccessTokenSecretKey		= @"oauth_token_access_s
 NSString * const MPOAuthCredentialSessionHandleKey			= @"oauth_session_handle";
 NSString * const MPOAuthCredentialVerifierKey				= @"oauth_verifier";
 
-@interface MPOAuthAPI ()
-@property (nonatomic, readwrite, assign) MPOAuthAuthenticationState authenticationState;
-@end
-
-
 @interface MPOAuthAuthenticationMethodOAuth ()
 @property (nonatomic, readwrite, assign) BOOL oauth10aModeActive;
 
@@ -59,12 +54,6 @@ NSString * const MPOAuthCredentialVerifierKey				= @"oauth_verifier";
 	return self;
 }
 
-- (oneway void)dealloc {
-	self.oauthRequestTokenURL = nil;
-	self.oauthAuthorizeTokenURL = nil;
-
-	[super dealloc];
-}
 
 @synthesize delegate = delegate_;
 @synthesize oauthRequestTokenURL = oauthRequestTokenURL_;
@@ -98,10 +87,10 @@ NSString * const MPOAuthCredentialVerifierKey				= @"oauth_verifier";
 		MPURLRequestParameter *callbackParameter = nil;
 		if (self.delegate && [self.delegate respondsToSelector: @selector(callbackURLForCompletedUserAuthorization)]) {
 			NSURL *callbackURL = [self.delegate callbackURLForCompletedUserAuthorization];
-			callbackParameter = [[[MPURLRequestParameter alloc] initWithName:@"oauth_callback" andValue:[callbackURL absoluteString]] autorelease];
+			callbackParameter = [[MPURLRequestParameter alloc] initWithName:@"oauth_callback" andValue:[callbackURL absoluteString]];
 		} else {
 			// oob = "Out of bounds"
-			callbackParameter = [[[MPURLRequestParameter alloc] initWithName:@"oauth_callback" andValue:@"oob"] autorelease];
+			callbackParameter = [[MPURLRequestParameter alloc] initWithName:@"oauth_callback" andValue:@"oob"];
 		}
 		
 		NSArray *params = [NSArray arrayWithObject:callbackParameter];
@@ -154,7 +143,7 @@ NSString * const MPOAuthCredentialVerifierKey				= @"oauth_verifier";
 
 		NSString *verifier = [self.delegate oauthVerifierForCompletedUserAuthorization];
 		if (verifier) {
-			verifierParameter = [[[MPURLRequestParameter alloc] initWithName:@"oauth_verifier" andValue:verifier] autorelease];
+			verifierParameter = [[MPURLRequestParameter alloc] initWithName:@"oauth_verifier" andValue:verifier];
 			params = [NSArray arrayWithObject:verifierParameter];
 		}
 	}

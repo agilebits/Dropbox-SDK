@@ -31,8 +31,8 @@
 @property (nonatomic, assign) SEL failureSelector; // To send failure events to a different selector set this
 @property (nonatomic, assign) SEL downloadProgressSelector; // To receive download progress events set this
 @property (nonatomic, assign) SEL uploadProgressSelector; // To receive upload progress events set this
-@property (nonatomic, retain) NSString* resultFilename; // The file to put the HTTP body in, otherwise body is stored in resultData
-@property (nonatomic, retain) NSDictionary* userInfo;
+@property (nonatomic) NSString* resultFilename; // The file to put the HTTP body in, otherwise body is stored in resultData
+@property (nonatomic) NSDictionary* userInfo;
 
 @property (nonatomic, readonly) NSURLRequest* request;
 @property (nonatomic, readonly) NSHTTPURLResponse* response;
@@ -41,8 +41,8 @@
 @property (nonatomic, readonly) CGFloat downloadProgress;
 @property (nonatomic, readonly) CGFloat uploadProgress;
 @property (nonatomic, readonly) NSData* resultData;
-@property (nonatomic, readonly) NSString* resultString;
-@property (nonatomic, readonly) NSObject* resultJSON;
+@property (weak, nonatomic, readonly) NSString* resultString;
+@property (unsafe_unretained, nonatomic, readonly) NSObject* resultJSON;
 @property (nonatomic, readonly) NSError* error;
 
 // NSOperation methods

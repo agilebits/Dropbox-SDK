@@ -15,7 +15,7 @@
 #import "NSString+URLEscapingAdditions.h"
 
 @interface MPOAuthURLRequest ()
-@property (nonatomic, readwrite, retain) NSURLRequest *urlRequest;
+@property (nonatomic, readwrite) NSURLRequest *urlRequest;
 @end
 
 @implementation MPOAuthURLRequest
@@ -31,21 +31,13 @@
 
 - (id)initWithURLRequest:(NSURLRequest *)inRequest {
 	if ((self = [super init])) {
-		self.url = [[inRequest URL] urlByRemovingQuery];
-		self.parameters = [[MPURLRequestParameter parametersFromString:[[inRequest URL] query]] mutableCopy];
-		self.HTTPMethod = [inRequest HTTPMethod];
+		_url = [[inRequest URL] urlByRemovingQuery];
+		_parameters = [[MPURLRequestParameter parametersFromString:[[inRequest URL] query]] mutableCopy];
+		_httpMethod = [inRequest HTTPMethod];
 	}
 	return self;
 }
 
-- (oneway void)dealloc {
-	self.url = nil;
-	self.HTTPMethod = nil;
-	self.urlRequest = nil;
-	self.parameters = nil;
-	
-	[super dealloc];
-}
 
 @synthesize url = _url;
 @synthesize HTTPMethod = _httpMethod;
@@ -82,11 +74,8 @@
 		[NSException raise:@"UnhandledHTTPMethodException" format:@"The requested HTTP method, %@, is not supported", self.HTTPMethod];
 	}
 	
-	[parameterString release];
-	[signatureParameter release];		
 	
 	self.urlRequest = aRequest;
-	[aRequest release];
 		
 	return aRequest;
 }

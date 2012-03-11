@@ -21,13 +21,13 @@ extern NSString * const MPOAuthNotificationRequestTokenRejected;
 	NSURL									*oauthAuthorizeTokenURL_;
 	BOOL									oauth10aModeActive_;
 	
-	id <MPOAuthAuthenticationMethodOAuthDelegate> delegate_;
+	id <MPOAuthAuthenticationMethodOAuthDelegate> __unsafe_unretained delegate_;
 }
 
-@property (nonatomic, readwrite, assign) id <MPOAuthAuthenticationMethodOAuthDelegate> delegate;
+@property (nonatomic, readwrite, unsafe_unretained) id <MPOAuthAuthenticationMethodOAuthDelegate> delegate;
 
-@property (nonatomic, readwrite, retain) NSURL *oauthRequestTokenURL;
-@property (nonatomic, readwrite, retain) NSURL *oauthAuthorizeTokenURL;
+@property (nonatomic, readwrite) NSURL *oauthRequestTokenURL;
+@property (nonatomic, readwrite) NSURL *oauthAuthorizeTokenURL;
 
 - (void)authenticate;
 

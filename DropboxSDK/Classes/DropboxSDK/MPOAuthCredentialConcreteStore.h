@@ -16,18 +16,18 @@
 	NSURL				*authenticationURL_;
 }
 
-@property (nonatomic, readonly, retain) NSURL *baseURL;
-@property (nonatomic, readonly, retain) NSURL *authenticationURL;
+@property (nonatomic, readonly) NSURL *baseURL;
+@property (nonatomic, readonly) NSURL *authenticationURL;
 
-@property (nonatomic, readonly) NSString *tokenSecret;
-@property (nonatomic, readonly) NSString *signingKey;
+@property (weak, nonatomic, readonly) NSString *tokenSecret;
+@property (weak, nonatomic, readonly) NSString *signingKey;
 
-@property (nonatomic, readwrite, retain) NSString *requestToken;
-@property (nonatomic, readwrite, retain) NSString *requestTokenSecret;
-@property (nonatomic, readwrite, retain) NSString *accessToken;
-@property (nonatomic, readwrite, retain) NSString *accessTokenSecret;
+@property (nonatomic, readwrite) NSString *requestToken;
+@property (nonatomic, readwrite) NSString *requestTokenSecret;
+@property (nonatomic, readwrite) NSString *accessToken;
+@property (nonatomic, readwrite) NSString *accessTokenSecret;
 
-@property (nonatomic, readwrite, retain) NSString *sessionHandle;
+@property (nonatomic, readwrite) NSString *sessionHandle;
 
 - (id)initWithCredentials:(NSDictionary *)inCredential;
 - (id)initWithCredentials:(NSDictionary *)inCredentials forBaseURL:(NSURL *)inBaseURL;

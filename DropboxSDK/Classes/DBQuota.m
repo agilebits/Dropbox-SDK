@@ -20,9 +20,6 @@
     return self;
 }
 
-- (void)dealloc {
-    [super dealloc];
-}
 
 @synthesize normalConsumedBytes;
 @synthesize sharedConsumedBytes;

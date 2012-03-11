@@ -19,10 +19,9 @@ otherButtonTitles:(NSString *)otherButtonTitles, ... {
 
     va_list args;
     va_start(args, otherButtonTitles);
-    [[[[UIAlertView alloc]
+    [[[UIAlertView alloc]
        initWithTitle:title message:message delegate:delegate cancelButtonTitle:cancelButtonTitle
        otherButtonTitles:otherButtonTitles, args, nil]
-      autorelease]
      show];
     va_end(args);
 }

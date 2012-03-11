@@ -24,15 +24,9 @@ NSString * const MPOAuthNotificationAccessTokenRefreshed	= @"MPOAuthNotification
 NSString * const MPOAuthNotificationOAuthCredentialsReady	= @"MPOAuthNotificationOAuthCredentialsReady";
 NSString * const MPOAuthNotificationErrorHasOccurred		= @"MPOAuthNotificationErrorHasOccurred";
 
-@interface MPOAuthURLResponse ()
-@property (nonatomic, readwrite, retain) NSURLResponse *urlResponse;
-@property (nonatomic, readwrite, retain) NSDictionary *oauthParameters;
-@end
-
-
 @interface MPOAuthAPIRequestLoader ()
-@property (nonatomic, readwrite, retain) NSData *data;
-@property (nonatomic, readwrite, retain) NSString *responseString;
+@property (nonatomic, readwrite) NSData *data;
+@property (nonatomic, readwrite) NSString *responseString;
 
 - (void)_interrogateResponseForOAuthData;
 @end
@@ -42,7 +36,7 @@ NSString * const MPOAuthNotificationErrorHasOccurred		= @"MPOAuthNotificationErr
 @implementation MPOAuthAPIRequestLoader
 
 - (id)initWithURL:(NSURL *)inURL {
-	return [self initWithRequest:[[[MPOAuthURLRequest alloc] initWithURL:inURL andParameters:nil] autorelease]];
+	return [self initWithRequest:[[MPOAuthURLRequest alloc] initWithURL:inURL andParameters:nil]];
 }
 
 - (id)initWithRequest:(MPOAuthURLRequest *)inRequest {
@@ -53,15 +47,6 @@ NSString * const MPOAuthNotificationErrorHasOccurred		= @"MPOAuthNotificationErr
 	return self;
 }
 
-- (oneway void)dealloc {
-	self.credentials = nil;
-	self.oauthRequest = nil;
-	self.oauthResponse = nil;
-	self.data = nil;
-	self.responseString = nil;
-
-	[super dealloc];
-}
 
 @synthesize credentials = _credentials;
 @synthesize oauthRequest = _oauthRequest;
@@ -132,6 +117,9 @@ NSString * const MPOAuthNotificationErrorHasOccurred		= @"MPOAuthNotificationErr
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
 	[self _interrogateResponseForOAuthData];
 	
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
+	
 	if (_action) {
 		if ([_target conformsToProtocol:@protocol(MPOAuthAPIInternalClient)]) {
 			[_target performSelector:_action withObject:self withObject:self.data];
@@ -139,6 +127,9 @@ NSString * const MPOAuthNotificationErrorHasOccurred		= @"MPOAuthNotificationErr
 			[_target performSelector:_action withObject:self.oauthRequest.url withObject:self.responseString];
 		}
 	}
+	
+#pragma clang diagnostic pop
+	
 }
 
 #pragma mark -

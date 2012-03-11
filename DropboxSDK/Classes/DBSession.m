@@ -56,8 +56,7 @@ static NSString *kDBDropboxUnknownUserId = @"unknown";
 
 + (void)setSharedSession:(DBSession *)session {
     if (session == _sharedSession) return;
-    [_sharedSession release];
-    _sharedSession = [session retain];
+    _sharedSession = session;
 }
 
 - (id)initWithAppKey:(NSString *)key appSecret:(NSString *)secret root:(NSString *)theRoot {
@@ -97,17 +96,11 @@ static NSString *kDBDropboxUnknownUserId = @"unknown";
             }
         }
         
-        root = [theRoot retain];
+        root = theRoot;
     }
     return self;
 }
 
-- (void)dealloc {
-    [baseCredentials release];
-    [credentialStores release];
-    [root release];
-    [super dealloc];
-}
 
 @synthesize root;
 @synthesize delegate;
@@ -123,7 +116,6 @@ static NSString *kDBDropboxUnknownUserId = @"unknown";
         credentialStore = 
             [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
         [credentialStores setObject:credentialStore forKey:userId];
-        [credentialStore release];
         
         if (![userId isEqual:kDBDropboxUnknownUserId] && [credentialStores objectForKey:kDBDropboxUnknownUserId]) {
             // If the unknown user is in credential store, replace it with this new entry
@@ -179,7 +171,7 @@ static NSString *kDBDropboxUnknownUserId = @"unknown";
 /* A private function for parsing URL parameters. */
 - (NSDictionary*)parseURLParams:(NSString *)query {
     NSArray *pairs = [query componentsSeparatedByString:@"&"];
-    NSMutableDictionary *params = [[[NSMutableDictionary alloc] init] autorelease];
+    NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
     for (NSString *pair in pairs) {
         NSArray *kv = [pair componentsSeparatedByString:@"="];
         NSString *val =
@@ -225,7 +217,7 @@ static NSString *kDBDropboxUnknownUserId = @"unknown";
 
 - (MPOAuthCredentialConcreteStore *)credentialStoreForUserId:(NSString *)userId {
     if (!userId) {
-        return [[[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials] autorelease];
+        return [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
     }
     return [credentialStores objectForKey:userId];
 }
@@ -251,7 +243,6 @@ static NSString *kDBDropboxUnknownUserId = @"unknown";
         [userCredentials setObject:store.accessToken forKey:kMPOAuthCredentialAccessToken];
         [userCredentials setObject:store.accessTokenSecret forKey:kMPOAuthCredentialAccessTokenSecret];
         [allUserCredentials addObject:userCredentials];
-        [userCredentials release];
     }
     [credentials setObject:allUserCredentials forKey:kDBDropboxUserCredentials];
     

@@ -30,11 +30,10 @@ NSString *kMPOAuthSignatureMethod					= @"kMPOAuthSignatureMethod";
 NSString * const MPOAuthTokenRefreshDateDefaultsKey		= @"MPOAuthAutomaticTokenRefreshLastExpiryDate";
 
 @interface MPOAuthAPI ()
-@property (nonatomic, readwrite, retain) id <MPOAuthCredentialStore, MPOAuthParameterFactory> credentials;
-@property (nonatomic, readwrite, retain) NSURL *authenticationURL;
-@property (nonatomic, readwrite, retain) NSURL *baseURL;
-@property (nonatomic, readwrite, retain) NSMutableArray *activeLoaders;
-@property (nonatomic, readwrite, assign) MPOAuthAuthenticationState authenticationState;
+@property (nonatomic, readwrite) id <MPOAuthCredentialStore, MPOAuthParameterFactory> credentials;
+@property (nonatomic, readwrite) NSURL *authenticationURL;
+@property (nonatomic, readwrite) NSURL *baseURL;
+@property (nonatomic, readwrite) NSMutableArray *activeLoaders;
 
 - (void)performMethod:(NSString *)inMethod atURL:(NSURL *)inURL withParameters:(NSArray *)inParameters withTarget:(id)inTarget andAction:(SEL)inAction usingHTTPMethod:(NSString *)inHTTPMethod;
 @end
@@ -67,15 +66,6 @@ NSString * const MPOAuthTokenRefreshDateDefaultsKey		= @"MPOAuthAutomaticTokenRe
 	return self;	
 }
 
-- (oneway void)dealloc {
-	self.credentials = nil;
-	self.baseURL = nil;
-	self.authenticationURL = nil;
-	self.authenticationMethod = nil;
-	self.activeLoaders = nil;
-	
-	[super dealloc];
-}
 
 @synthesize credentials = credentials_;
 @synthesize baseURL = baseURL_;
@@ -149,8 +139,6 @@ NSString * const MPOAuthTokenRefreshDateDefaultsKey		= @"MPOAuthAutomaticTokenRe
 	[loader loadSynchronously:NO];
 	//	[self.activeLoaders addObject:loader];
 	
-	[loader release];
-	[aRequest release];
 }
 
 - (void)performURLRequest:(NSURLRequest *)inRequest withTarget:(id)inTarget andAction:(SEL)inAction {
@@ -168,8 +156,6 @@ NSString * const MPOAuthTokenRefreshDateDefaultsKey		= @"MPOAuthAutomaticTokenRe
 	[loader loadSynchronously:NO];
 	//	[self.activeLoaders addObject:loader];
 	
-	[loader release];
-	[aRequest release];	
 }
 
 - (NSData *)dataForMethod:(NSString *)inMethod {
@@ -187,9 +173,6 @@ NSString * const MPOAuthTokenRefreshDateDefaultsKey		= @"MPOAuthAutomaticTokenRe
 
 	loader.credentials = self.credentials;
 	[loader loadSynchronously:YES];
-	
-	[loader autorelease];
-	[aRequest release];
 	
 	return loader.data;
 }

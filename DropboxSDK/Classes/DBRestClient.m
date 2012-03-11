@@ -31,7 +31,7 @@
 	NSMutableDictionary* loadRequests;
 	NSMutableDictionary* imageLoadRequests;
 	NSMutableDictionary* uploadRequests;
-	id<DBRestClientDelegate> delegate;
+	id<DBRestClientDelegate> __unsafe_unretained delegate;
 	
 	NSOperationQueue *requestQueue;
 }
@@ -45,7 +45,7 @@
 - (NSMutableURLRequest*)requestWithHost:(NSString*)host path:(NSString*)path parameters:(NSDictionary*)params method:(NSString*)method;
 - (void)checkForAuthenticationFailure:(DBRequest*)request;
 
-@property (nonatomic, readonly) MPOAuthCredentialConcreteStore *credentialStore;
+@property (weak, weak, nonatomic, readonly) MPOAuthCredentialConcreteStore *credentialStore;
 
 @end
 
@@ -61,9 +61,9 @@
     }
 	
     if ((self = [super init])) {
-        session = [aSession retain];
-        userId = [theUserId retain];
-        root = [aSession.root retain];
+        session = aSession;
+        userId = theUserId;
+        root = aSession.root;
         requests = [[NSMutableSet alloc] init];
         loadRequests = [[NSMutableDictionary alloc] init];
         imageLoadRequests = [[NSMutableDictionary alloc] init];
@@ -86,23 +86,15 @@
     for (DBRequest* request in requests) {
         [request cancel];
     }
-    [requests release];
     for (DBRequest* request in [loadRequests allValues]) {
         [request cancel];
     }
-    [loadRequests release];
     for (DBRequest* request in [imageLoadRequests allValues]) {
         [request cancel];
     }
-    [imageLoadRequests release];
     for (DBRequest* request in [uploadRequests allValues]) {
         [request cancel];
     }
-    [uploadRequests release];
-    [session release];
-    [userId release];
-    [root release];
-    [super dealloc];
 }
 
 - (NSInteger)maxConcurrentConnectionCount {
@@ -114,7 +106,7 @@
 }
 
 - (DBRequest *)requestWithURLRequest:(NSURLRequest *)urlRequest selector:(SEL)selector {
-    DBRequest* request = [[[DBRequest alloc] initWithURLRequest:urlRequest andInformTarget:self selector:selector] autorelease];
+    DBRequest* request = [[DBRequest alloc] initWithURLRequest:urlRequest andInformTarget:self selector:selector];
 	[requestQueue addOperation:request];
 	
 	return request;
@@ -149,7 +141,7 @@
     [self loadMetadata:path withParams:params];
 }
 
-- (void)requestDidLoadMetadata:(DBRequest*)request {
+- (void)requestDidLoadMetadata:(__unsafe_unretained DBRequest*)request {
     if (request.statusCode == 304) {
         if ([delegate respondsToSelector:@selector(restClient:metadataUnchangedAtPath:)]) {
             NSString* path = [request.userInfo objectForKey:@"path"];
@@ -170,7 +162,7 @@
         [inv setSelector:sel];
         [inv setArgument:&request atIndex:2];
         
-		NSThread *currentThread = [NSThread currentThread];
+		__unsafe_unretained NSThread *currentThread = [NSThread currentThread];
         [inv setArgument:&currentThread atIndex:3];
         [inv retainArguments];
         [inv performSelectorInBackground:@selector(invoke) withObject:nil];
@@ -181,18 +173,18 @@
 
 
 - (void)parseMetadataWithRequest:(DBRequest*)request resultThread:(NSThread *)thread {
-    NSAutoreleasePool* pool = [NSAutoreleasePool new];
+    @autoreleasepool {
     
-    NSDictionary* result = (NSDictionary*)[request resultJSON];
-    DBMetadata* metadata = [[[DBMetadata alloc] initWithDictionary:result] autorelease];
-    if (metadata) {
-        [self performSelector:@selector(didParseMetadata:) onThread:thread withObject:metadata waitUntilDone:NO];
-    } else {
-        [self performSelector:@selector(parseMetadataFailedForRequest:) onThread:thread
-                   withObject:request waitUntilDone:NO];
+        NSDictionary* result = (NSDictionary*)[request resultJSON];
+        DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
+        if (metadata) {
+            [self performSelector:@selector(didParseMetadata:) onThread:thread withObject:metadata waitUntilDone:NO];
+        } else {
+            [self performSelector:@selector(parseMetadataFailedForRequest:) onThread:thread
+                       withObject:request waitUntilDone:NO];
+        }
+    
     }
-    
-    [pool drain];
 }
 
 
@@ -257,7 +249,7 @@
 
 - (void)requestDidLoadFile:(DBRequest*)request {
     NSString* path = [request.userInfo objectForKey:@"path"];
-    
+
     if (request.error) {
         [self checkForAuthenticationFailure:request];
         if ([delegate respondsToSelector:@selector(restClient:loadFileFailedWithError:)]) {
@@ -265,16 +257,17 @@
         }
     } 
 	else {
-        NSString* filename = request.resultFilename;
+        __unsafe_unretained NSString* filename = request.resultFilename;
         NSDictionary* headers = [request.response allHeaderFields];
-        NSString* contentType = [headers objectForKey:@"Content-Type"];
+        __unsafe_unretained NSString* contentType = [headers objectForKey:@"Content-Type"];
         NSDictionary* metadataDict = [request xDropboxMetadataJSON];
-        NSString* eTag = [headers objectForKey:@"Etag"];
+        __unsafe_unretained NSString* eTag = [headers objectForKey:@"Etag"];
+		__unsafe_unretained DBRestClient *myself = self;
         if ([delegate respondsToSelector:@selector(restClient:loadedFile:)]) {
             [delegate restClient:self loadedFile:filename];
         } 
 		else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:metadata:)]) {
-            DBMetadata* metadata = [[[DBMetadata alloc] initWithDictionary:metadataDict] autorelease];
+            DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:metadataDict];
             [delegate restClient:self loadedFile:filename contentType:contentType metadata:metadata];
         } 
 		else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:)]) {
@@ -288,7 +281,7 @@
             NSInvocation* invocation = [NSInvocation invocationWithMethodSignature:signature];
             [invocation setTarget:delegate];
             [invocation setSelector:@selector(restClient:loadedFile:contentType:eTag:)];
-            [invocation setArgument:&self atIndex:2];
+            [invocation setArgument:&myself atIndex:2];
             [invocation setArgument:&filename atIndex:3];
             [invocation setArgument:&contentType atIndex:4];
             [invocation setArgument:&eTag atIndex:5];
@@ -349,7 +342,7 @@
         NSString* filename = request.resultFilename;
         NSDictionary* metadataDict = [request xDropboxMetadataJSON];
         if ([delegate respondsToSelector:@selector(restClient:loadedThumbnail:metadata:)]) {
-            DBMetadata* metadata = [[[DBMetadata alloc] initWithDictionary:metadataDict] autorelease];
+            DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:metadataDict];
             [delegate restClient:self loadedThumbnail:filename metadata:metadata];
         } else if ([delegate respondsToSelector:@selector(restClient:loadedThumbnail:)]) {
 				// This callback is deprecated and this block exists only for backwards compatibility.
@@ -378,13 +371,12 @@
     NSString* paramString = [MPURLRequestParameter parameterStringForParameters:paramList];
     
     MPOAuthURLRequest* oauthRequest = 
-	[[[MPOAuthURLRequest alloc] initWithURL:baseUrl andParameters:paramList] autorelease];
+	[[MPOAuthURLRequest alloc] initWithURL:baseUrl andParameters:paramList];
     oauthRequest.HTTPMethod = @"POST";
     MPOAuthSignatureParameter *signatureParameter = 
-	[[[MPOAuthSignatureParameter alloc] 
+	[[MPOAuthSignatureParameter alloc] 
 	  initWithText:paramString andSecret:self.credentialStore.signingKey 
-	  forRequest:oauthRequest usingMethod:self.credentialStore.signatureMethod]
-	 autorelease];
+	  forRequest:oauthRequest usingMethod:self.credentialStore.signatureMethod];
 	
     return [signatureParameter URLEncodedParameterString];
 }
@@ -395,9 +387,8 @@
     NSMutableArray *paramList = [NSMutableArray arrayWithArray:params];
 		// Then rebuild request using that signature
     [paramList sortUsingSelector:@selector(compare:)];
-    NSMutableString* realParamString = [[[NSMutableString alloc] initWithString:
-										 [MPURLRequestParameter parameterStringForParameters:paramList]]
-										autorelease];
+    NSMutableString* realParamString = [[NSMutableString alloc] initWithString:
+										 [MPURLRequestParameter parameterStringForParameters:paramList]];
     [realParamString appendFormat:@"&%@", sig];
     
     NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@?%@", urlString, realParamString]];
@@ -493,7 +484,7 @@
             [delegate restClient:self uploadFileFailedWithError:request.error];
         }
     } else {
-        DBMetadata *metadata = [[[DBMetadata alloc] initWithDictionary:result] autorelease];
+        DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:result];
 		
         NSString* sourcePath = [request.userInfo objectForKey:@"sourcePath"];
         NSString* destPath = [request.userInfo objectForKey:@"destinationPath"];
@@ -548,7 +539,6 @@
         for (NSDictionary *dict in resp) {
             DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:dict];
             [revisions addObject:metadata];
-            [metadata release];
         }
         NSString *path = [request.userInfo objectForKey:@"path"];
 		
@@ -580,7 +570,7 @@
             [delegate restClient:self restoreFileFailedWithError:request.error];
         }
     } else {
-        DBMetadata *metadata = [[[DBMetadata alloc] initWithDictionary:dict] autorelease];
+        DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:dict];
         if ([delegate respondsToSelector:@selector(restClient:restoredFile:)]) {
             [delegate restClient:self restoredFile:metadata];
         }
@@ -720,7 +710,7 @@
         }
     } else {
         NSDictionary* result = (NSDictionary*)[request resultJSON];
-        DBMetadata* metadata = [[[DBMetadata alloc] initWithDictionary:result] autorelease];
+        DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
         if ([delegate respondsToSelector:@selector(restClient:createdFolder:)]) {
             [delegate restClient:self createdFolder:metadata];
         }
@@ -750,7 +740,7 @@
         }
     } else {
         NSDictionary* result = (NSDictionary*)[request resultJSON];
-        DBAccountInfo* accountInfo = [[[DBAccountInfo alloc] initWithDictionary:result] autorelease];
+        DBAccountInfo* accountInfo = [[DBAccountInfo alloc] initWithDictionary:result];
         if ([delegate respondsToSelector:@selector(restClient:loadedAccountInfo:)]) {
             [delegate restClient:self loadedAccountInfo:accountInfo];
         }
@@ -784,7 +774,6 @@
             for (NSDictionary* dict in response) {
                 DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:dict];
                 [results addObject:metadata];
-                [metadata release];
             }
         }
         NSString* path = [request.userInfo objectForKey:@"path"];
@@ -864,13 +853,13 @@
 + (NSString*)escapePath:(NSString*)path {
     CFStringEncoding encoding = CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding);
     NSString *escapedPath = 
-	(NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
-														(CFStringRef)path,
+	(__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+														(__bridge CFStringRef)path,
 														NULL,
 														(CFStringRef)@":?=,!$&'()*+;[]@#~",
 														encoding);
     
-    return [escapedPath autorelease];
+    return escapedPath;
 }
 
 + (NSString *)bestLanguage {
@@ -924,7 +913,7 @@
     [[self.credentialStore oauthParameters] arrayByAddingObjectsFromArray:extraParams];
 	
     MPOAuthURLRequest* oauthRequest = 
-	[[[MPOAuthURLRequest alloc] initWithURL:url andParameters:paramList] autorelease];
+	[[MPOAuthURLRequest alloc] initWithURL:url andParameters:paramList];
     if (method) {
         oauthRequest.HTTPMethod = method;
     }

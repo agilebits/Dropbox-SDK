@@ -26,7 +26,7 @@ NSString * DBLogFilePath()
 {
 	static NSString *logFilePath;
 	if (logFilePath == nil)
-		logFilePath = [[NSHomeDirectory() stringByAppendingFormat: @"/tmp/run.log"] retain];
+		logFilePath = [NSHomeDirectory() stringByAppendingFormat: @"/tmp/run.log"];
 	return logFilePath;
 }
 
