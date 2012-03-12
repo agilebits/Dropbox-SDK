@@ -155,52 +155,24 @@
         }
     } 
 	else {
-        SEL sel = @selector(parseMetadataWithRequest:resultThread:);
-        NSMethodSignature *sig = [self methodSignatureForSelector:sel];
-        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-        [inv setTarget:self];
-        [inv setSelector:sel];
-        [inv setArgument:&request atIndex:2];
-        
-		__unsafe_unretained NSThread *currentThread = [NSThread currentThread];
-        [inv setArgument:&currentThread atIndex:3];
-        [inv retainArguments];
-        [inv performSelectorInBackground:@selector(invoke) withObject:nil];
+		NSDictionary* result = (NSDictionary*)[request resultJSON];
+		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
+			if (metadata) {
+				if ([delegate respondsToSelector:@selector(restClient:loadedMetadata:)]) {
+					[delegate restClient:self loadedMetadata:metadata];
+				}
+			} else {
+				NSError *error = [NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
+				DBLogWarning(@"DropboxSDK: error parsing metadata");
+				if ([delegate respondsToSelector:@selector(restClient:loadMetadataFailedWithError:)]) {
+					[delegate restClient:self loadMetadataFailedWithError:error];
+				}
+			}
+        });
     }
 	
     [requests removeObject:request];
-}
-
-
-- (void)parseMetadataWithRequest:(DBRequest*)request resultThread:(NSThread *)thread {
-    @autoreleasepool {
-    
-        NSDictionary* result = (NSDictionary*)[request resultJSON];
-        DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
-        if (metadata) {
-            [self performSelector:@selector(didParseMetadata:) onThread:thread withObject:metadata waitUntilDone:NO];
-        } else {
-            [self performSelector:@selector(parseMetadataFailedForRequest:) onThread:thread
-                       withObject:request waitUntilDone:NO];
-        }
-    
-    }
-}
-
-
-- (void)didParseMetadata:(DBMetadata*)metadata {
-    if ([delegate respondsToSelector:@selector(restClient:loadedMetadata:)]) {
-        [delegate restClient:self loadedMetadata:metadata];
-    }
-}
-
-- (void)parseMetadataFailedForRequest:(DBRequest *)request {
-    NSError *error = 
-	[NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
-    DBLogWarning(@"DropboxSDK: error parsing metadata");
-    if ([delegate respondsToSelector:@selector(restClient:loadMetadataFailedWithError:)]) {
-        [delegate restClient:self loadMetadataFailedWithError:error];
-    }
 }
 
 - (void)loadFile:(NSString *)path atRev:(NSString *)rev intoPath:(NSString *)destPath

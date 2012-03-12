@@ -75,18 +75,10 @@ static id networkRequestDelegate = nil;
 }
 
 - (void)networkRequestStopped {
-	[self willChangeValueForKey:@"isExecuting"];
-	[self willChangeValueForKey:@"isFinished"];
+	CFRunLoopStop(CFRunLoopGetCurrent());
 	
-	finished = YES;
 	urlConnection = nil;
     [networkRequestDelegate networkRequestStopped];
-	
-//	[[NSRunLoop currentRunLoop] removePort:port forMode:NSRunLoopCommonModes];
-//	[[NSRunLoop currentRunLoop] stop];
-	
-	[self didChangeValueForKey:@"isFinished"];
-	[self didChangeValueForKey:@"isExecuting"];
 }
 
 - (NSString*)resultString {
@@ -330,32 +322,10 @@ static id networkRequestDelegate = nil;
 
 #pragma mark - NSOperation methods
 
-- (void)start {
-	[self willChangeValueForKey:@"isExecuting"];
-	
-	NSRunLoop *runLoop = [NSRunLoop mainRunLoop];
-	
-	urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
-	[urlConnection scheduleInRunLoop:runLoop forMode:NSRunLoopCommonModes];
-	[urlConnection start];
-	
-	[networkRequestDelegate networkRequestStarted];
-	
-	[self didChangeValueForKey:@"isExecuting"];
+- (void)main {
+	urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
+	CFRunLoopRun();
 }
-
-- (BOOL)isConcurrent {
-	return YES;
-}
-
-- (BOOL)isExecuting {
-	return urlConnection != nil;
-}
-
-- (BOOL)isFinished {
-	return finished;
-}
-
 
 #pragma mark - private methods
 

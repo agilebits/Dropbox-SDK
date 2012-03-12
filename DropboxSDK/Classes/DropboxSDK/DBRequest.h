@@ -46,11 +46,7 @@
 @property (nonatomic, readonly) NSError* error;
 
 // NSOperation methods
-
-- (void)start;
-- (BOOL)isConcurrent;
-- (BOOL)isExecuting;
-- (BOOL)isFinished;
+- (void)main;
 
 @end
 
