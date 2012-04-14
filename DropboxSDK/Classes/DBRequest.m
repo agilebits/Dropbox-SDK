@@ -75,10 +75,10 @@ static id networkRequestDelegate = nil;
 }
 
 - (void)networkRequestStopped {
-	CFRunLoopStop(CFRunLoopGetCurrent());
-	
 	urlConnection = nil;
     [networkRequestDelegate networkRequestStopped];
+	
+	CFRunLoopStop(CFRunLoopGetCurrent());
 }
 
 - (NSString*)resultString {
