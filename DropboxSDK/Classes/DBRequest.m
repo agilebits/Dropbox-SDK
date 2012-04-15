@@ -75,9 +75,7 @@ static id networkRequestDelegate = nil;
 }
 
 - (void)networkRequestStopped {
-	urlConnection = nil;
     [networkRequestDelegate networkRequestStopped];
-	
 	CFRunLoopStop(CFRunLoopGetCurrent());
 }
 
