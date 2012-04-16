@@ -10,6 +10,8 @@
 #import "DBLog.h"
 #import "DBError.h"
 
+#include <stdlib.h>
+
 static id networkRequestDelegate = nil;
 
 @interface DBRequest () {
@@ -154,17 +156,20 @@ static id networkRequestDelegate = nil;
     if (resultFilename && [self statusCode] == 200) {
         // Create the file here so it's created in case it's zero length
         // File is downloaded into a temporary file and then moved over when completed successfully
-        NSString* filename = 
-            [NSString stringWithFormat:@"%.0f", 1000*[NSDate timeIntervalSinceReferenceDate]];
-        tempFilename = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
-        
-        NSFileManager* fileManager = [NSFileManager new];
-        BOOL success = [fileManager createFileAtPath:tempFilename contents:nil attributes:nil];
-        if (!success) {
-            DBLogError(@"DBRequest#connection:didReceiveData: Error creating file at path: %@", tempFilename);
-        }
 
-        fileHandle = [NSFileHandle fileHandleForWritingAtPath:tempFilename];
+		NSString *filenameTemplate = [NSString stringWithFormat:@"%@/dropbox.XXXXXXXXXX", NSTemporaryDirectory()];
+		int len = [filenameTemplate lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+		NSMutableData *filename = [NSMutableData dataWithBytes:[filenameTemplate UTF8String] length:(len + 1)];
+		
+		int fd = mkstemp([filename mutableBytes]);
+		if (fd < 0) {
+            DBLogError(@"DBRequest#connection:didReceiveData: Failed to create temp file %s, error: %jd", filename, (intmax_t)errno);
+            [urlConnection cancel];
+		}
+		else {
+			tempFilename = [[NSString alloc] initWithData:filename encoding:NSUTF8StringEncoding];
+			fileHandle = [[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES];
+		}
     }
 }
 
@@ -269,7 +274,7 @@ static id networkRequestDelegate = nil;
     SEL sel = (error && failureSelector) ? failureSelector : selector;
     [target performSelector:sel withObject:self];
 #pragma clang diagnostic pop
-
+	
     [self networkRequestStopped];
 }
 
@@ -303,7 +308,7 @@ static id networkRequestDelegate = nil;
 - (void)connection:(NSURLConnection*)connection didSendBodyData:(NSInteger)bytesWritten 
     totalBytesWritten:(NSInteger)totalBytesWritten 
     totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite {
-    
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
     uploadProgress = (CGFloat)totalBytesWritten / (CGFloat)totalBytesExpectedToWrite;
