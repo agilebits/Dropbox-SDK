@@ -28,9 +28,9 @@
    correct type. If not, it will set the error object with an error code of DBErrorInvalidResponse */
 - (id)parseResponseAsType:(Class)cls;
 
-@property (nonatomic, assign) SEL failureSelector; // To send failure events to a different selector set this
-@property (nonatomic, assign) SEL downloadProgressSelector; // To receive download progress events set this
-@property (nonatomic, assign) SEL uploadProgressSelector; // To receive upload progress events set this
+@property (nonatomic) SEL failureSelector; // To send failure events to a different selector set this
+@property (nonatomic) SEL downloadProgressSelector; // To receive download progress events set this
+@property (nonatomic) SEL uploadProgressSelector; // To receive upload progress events set this
 @property (nonatomic) NSString* resultFilename; // The file to put the HTTP body in, otherwise body is stored in resultData
 @property (nonatomic) NSDictionary* userInfo;
 
@@ -41,8 +41,9 @@
 @property (nonatomic, readonly) CGFloat downloadProgress;
 @property (nonatomic, readonly) CGFloat uploadProgress;
 @property (nonatomic, readonly) NSData* resultData;
-@property (weak, nonatomic, readonly) NSString* resultString;
-@property (unsafe_unretained, nonatomic, readonly) NSObject* resultJSON;
+
+@property (nonatomic, readonly) NSString* resultString;
+@property (nonatomic, readonly) NSObject* resultJSON;
 @property (nonatomic, readonly) NSError* error;
 
 // NSOperation methods
