@@ -9,6 +9,7 @@
 
 #import "DBRestClient.h"
 
+#import "DBDeltaEntry.h"
 #import "DBAccountInfo.h"
 #import "DBError.h"
 #import "DBLog.h"
@@ -84,23 +85,31 @@
 }
 
 
-- (void)dealloc {
-	
+- (void)cancelAllRequests {
 	@synchronized (requests) {
 		for (DBRequest* request in requests) [request cancel];
+		[requests removeAllObjects];
 	}
-
+	
 	@synchronized (loadRequests) {
 		for (DBRequest* request in [loadRequests allValues]) [request cancel];
+		[loadRequests removeAllObjects];
 	}
-
+	
 	@synchronized (imageLoadRequests) {
 		for (DBRequest* request in [imageLoadRequests allValues]) [request cancel];
+		[imageLoadRequests removeAllObjects];
 	}
-
+	
 	@synchronized (uploadRequests) {
 		for (DBRequest* request in [uploadRequests allValues]) [request cancel];
+		[uploadRequests removeAllObjects];
 	}
+}
+
+
+- (void)dealloc {
+	[self cancelAllRequests];
 }
 
 - (NSInteger)maxConcurrentConnectionCount {
@@ -183,6 +192,61 @@
 	@synchronized (requests) {
 		[requests removeObject:request];
 	}
+}
+
+
+- (void)loadDelta:(NSString *)cursor {
+    NSDictionary *params = nil;
+    if (cursor) {
+        params = [NSDictionary dictionaryWithObject:cursor forKey:@"cursor"];
+    }
+	
+    NSString *fullPath = [NSString stringWithFormat:@"/delta"];
+    NSMutableURLRequest* urlRequest =
+	[self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params method:@"POST"];
+	
+    DBRequest* request = [[DBRequest alloc] initWithURLRequest:urlRequest andInformTarget:self selector:@selector(requestDidLoadDelta:)];
+	
+    request.userInfo = params;
+    [requests addObject:request];
+}
+
+- (void)requestDidLoadDelta:(DBRequest *)request {
+    if (request.error) {
+        [self checkForAuthenticationFailure:request];
+        if ([delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
+            [delegate restClient:self loadDeltaFailedWithError:request.error];
+        }
+    } 
+	else {
+		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			NSDictionary* result = [request parseResponseAsType:[NSDictionary class]];
+			if (result) {
+				NSArray *entryArrays = [result objectForKey:@"entries"];
+				NSMutableArray *entries = [NSMutableArray arrayWithCapacity:[entryArrays count]];
+				for (NSArray *entryArray in entryArrays) {
+					DBDeltaEntry *entry = [[DBDeltaEntry alloc] initWithArray:entryArray];
+					[entries addObject:entry];
+				}
+				BOOL reset = [[result objectForKey:@"reset"] boolValue];
+				NSString *cursor = [result objectForKey:@"cursor"];
+				BOOL hasMore = [[result objectForKey:@"has_more"] boolValue];
+				
+				if ([delegate respondsToSelector:@selector(restClient:loadedDeltaEntries:reset:cursor:hasMore:)]) {
+					[delegate restClient:self loadedDeltaEntries:entryArrays reset:reset cursor:cursor hasMore:hasMore];
+				}
+			} 
+			else {
+				NSError *error = [NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
+				DBLogWarning(@"DropboxSDK: error parsing metadata");
+				if ([delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
+					[delegate restClient:self loadDeltaFailedWithError:error];
+				}
+			}
+		});
+    }
+	
+    [requests removeObject:request];
 }
 
 - (void)loadFile:(NSString *)path atRev:(NSString *)rev intoPath:(NSString *)destPath
@@ -608,8 +672,7 @@
         NSDictionary *params = (NSDictionary *)request.userInfo;
 		
         if ([delegate respondsToSelector:@selector(restClient:movedPath:toPath:)]) {
-            [delegate restClient:self movedPath:[params valueForKey:@"from_path"] 
-						  toPath:[params valueForKey:@"to_path"]];
+            [delegate restClient:self movedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
         }
     }
 	
@@ -648,14 +711,79 @@
         NSDictionary *params = (NSDictionary *)request.userInfo;
 		
         if ([delegate respondsToSelector:@selector(restClient:copiedPath:toPath:)]) {
-            [delegate restClient:self copiedPath:[params valueForKey:@"from_path"] 
-						  toPath:[params valueForKey:@"to_path"]];
+            [delegate restClient:self copiedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
         }
     }
 	
 	@synchronized (requests) {
 		[requests removeObject:request];
 	}
+}
+
+
+- (void)createCopyRef:(NSString *)path {
+    NSDictionary* userInfo = [NSDictionary dictionaryWithObject:path forKey:@"path"];
+    NSString *fullPath = [NSString stringWithFormat:@"/copy_ref/%@%@", root, path];
+    NSMutableURLRequest* urlRequest =
+	[self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:nil method:@"POST"];
+	
+    DBRequest* request = [[DBRequest alloc] initWithURLRequest:urlRequest andInformTarget:self selector:@selector(requestDidCreateCopyRef:)];
+	
+    request.userInfo = userInfo;
+    [requests addObject:request];
+}
+
+- (void)requestDidCreateCopyRef:(DBRequest *)request {
+    NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
+    if (!result) {
+        [self checkForAuthenticationFailure:request];
+        if ([delegate respondsToSelector:@selector(restClient:createCopyRefFailedWithError:)]) {
+            [delegate restClient:self createCopyRefFailedWithError:request.error];
+        }
+    } else {
+        NSString *copyRef = [result objectForKey:@"copy_ref"];
+        if ([delegate respondsToSelector:@selector(restClient:createdCopyRef:)]) {
+            [delegate restClient:self createdCopyRef:copyRef];
+        }
+    }
+	
+    [requests removeObject:request];
+}
+
+
+- (void)copyFromRef:(NSString*)copyRef toPath:(NSString *)toPath {
+    NSDictionary *params =
+	[NSDictionary dictionaryWithObjectsAndKeys:
+	 copyRef, @"from_copy_ref",
+	 root, @"root",
+	 toPath, @"to_path", nil];
+	
+    NSString *fullPath = [NSString stringWithFormat:@"/fileops/copy/"];
+    NSMutableURLRequest* urlRequest =
+	[self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params method:@"POST"];
+	
+    DBRequest* request = [[DBRequest alloc] initWithURLRequest:urlRequest andInformTarget:self selector:@selector(requestDidCopyFromRef:)];
+	
+    request.userInfo = params;
+    [requests addObject:request];
+}
+
+- (void)requestDidCopyFromRef:(DBRequest *)request {
+    NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
+    if (!result) {
+        [self checkForAuthenticationFailure:request];
+        if ([delegate respondsToSelector:@selector(restClient:copyFromRefFailedWithError:)]) {
+            [delegate restClient:self copyFromRefFailedWithError:request.error];
+        }
+    } else {
+        NSString *copyRef = [request.userInfo objectForKey:@"from_copy_ref"];
+        DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:result];
+        if ([delegate respondsToSelector:@selector(restClient:copiedRef:to:)]) {
+            [delegate restClient:self copiedRef:copyRef to:metadata];
+        }
+    }
+	
+    [requests removeObject:request];
 }
 
 

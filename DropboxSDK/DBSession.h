@@ -19,6 +19,7 @@ extern NSString *kDBRootDropbox;
 extern NSString *kDBRootAppFolder;
 
 extern NSString *kDBProtocolHTTPS;
+extern NSString *kDBDropboxUnknownUserId;
 
 @protocol DBSessionDelegate;
 
@@ -28,6 +29,7 @@ extern NSString *kDBProtocolHTTPS;
 @interface DBSession : NSObject {
     NSDictionary *baseCredentials;
     NSMutableDictionary *credentialStores;
+    MPOAuthCredentialConcreteStore *anonymousStore;
     NSString *root;
     id<DBSessionDelegate> __unsafe_unretained delegate;
 }
@@ -37,10 +39,6 @@ extern NSString *kDBProtocolHTTPS;
 
 - (id)initWithAppKey:(NSString *)key appSecret:(NSString *)secret root:(NSString *)root;
 - (BOOL)isLinked; // Session must be linked before creating any DBRestClient objects
-- (void)link;
-- (void)linkUserId:(NSString *)userId;
-
-- (BOOL)handleOpenURL:(NSURL *)url;
 
 - (void)unlinkAll;
 - (void)unlinkUserId:(NSString *)userId;
@@ -49,8 +47,8 @@ extern NSString *kDBProtocolHTTPS;
 - (void)updateAccessToken:(NSString *)token accessTokenSecret:(NSString *)secret forUserId:(NSString *)userId;
 
 @property (nonatomic, readonly) NSString *root;
-@property (weak, nonatomic, readonly) NSArray *userIds;
-@property (nonatomic, unsafe_unretained) id<DBSessionDelegate> delegate;
+@property (nonatomic, readonly) NSArray *userIds;
+@property (nonatomic, assign) id<DBSessionDelegate> delegate;
 
 @end
 
