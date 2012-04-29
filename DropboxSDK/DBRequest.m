@@ -163,7 +163,7 @@ static id networkRequestDelegate = nil;
 		
 		int fd = mkstemp([filename mutableBytes]);
 		if (fd < 0) {
-            DBLogError(@"DBRequest#connection:didReceiveData: Failed to create temp file %s, error: %jd", filename, (intmax_t)errno);
+            DBLogError(@"DBRequest#connection:didReceiveData: Failed to create temp file %s, error: %jd", [filename bytes], (intmax_t)errno);
             [urlConnection cancel];
 		}
 		else {
