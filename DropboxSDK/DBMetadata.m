@@ -8,7 +8,13 @@
 
 #import "DBMetadata.h"
 
+@interface DBMetadata ()
+@property (nonatomic, strong) NSDictionary *dict;
+@end
+
 @implementation DBMetadata
+
+@synthesize dict;
 
 + (NSDateFormatter*)dateFormatter {
     NSMutableDictionary* dictionary = [[NSThread currentThread] threadDictionary];
@@ -27,60 +33,91 @@
     return dateFormatter;
 }
 
-- (id)initWithDictionary:(NSDictionary*)dict {
+- (id)initWithDictionary:(NSDictionary*)dictionary {
     if ((self = [super init])) {
-        thumbnailExists = [[dict objectForKey:@"thumb_exists"] boolValue];
-        totalBytes = [[dict objectForKey:@"bytes"] longLongValue];
+		dict = dictionary;
+	}
 
-        if ([dict objectForKey:@"modified"]) {
-            lastModifiedDate = 
-                [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"modified"]];
-        }
-
-        if ([dict objectForKey:@"client_mtime"]) {
-            clientMtime = [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"client_mtime"]];
-        }
-
-        path = [dict objectForKey:@"path"];
-        isDirectory = [[dict objectForKey:@"is_dir"] boolValue];
-        
-        if ([dict objectForKey:@"contents"]) {
-            NSArray* subfileDicts = [dict objectForKey:@"contents"];
-            NSMutableArray* mutableContents = 
-                [[NSMutableArray alloc] initWithCapacity:[subfileDicts count]];
-            for (NSDictionary* subfileDict in subfileDicts) {
-                DBMetadata* subfile = [[DBMetadata alloc] initWithDictionary:subfileDict];
-                [mutableContents addObject:subfile];
-            }
-            contents = mutableContents;
-        }
-        
-        hash = [dict objectForKey:@"hash"];
-        humanReadableSize = [dict objectForKey:@"size"];
-        root = [dict objectForKey:@"root"];
-        icon = [dict objectForKey:@"icon"];
-        rev = [dict objectForKey:@"rev"];
-        revision = [[dict objectForKey:@"revision"] longLongValue];
-        isDeleted = [[dict objectForKey:@"is_deleted"] boolValue];
-    }
-    return self;
+	return self;
 }
 
+- (NSDictionary *)dictionary {
+	return dict;
+}
 
-@synthesize thumbnailExists;
-@synthesize totalBytes;
-@synthesize lastModifiedDate;
-@synthesize clientMtime;
-@synthesize path;
-@synthesize isDirectory;
-@synthesize contents;
-@synthesize hash;
-@synthesize humanReadableSize;
-@synthesize root;
-@synthesize icon;
-@synthesize rev;
-@synthesize revision;
-@synthesize isDeleted;
+- (BOOL)thumbnailExists {
+	return [[dict objectForKey:@"thumb_exists"] boolValue];
+}
+
+- (long long)totalBytes {
+	return [[dict objectForKey:@"bytes"] longLongValue];
+}
+
+- (NSDate *)lastModifiedDate {
+	if ([dict objectForKey:@"modified"]) {
+		return [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"modified"]];
+	}
+
+	return nil;
+}
+
+- (NSDate *)clientMtime {
+ 	// file's mtime for display purposes only
+	if ([dict objectForKey:@"client_mtime"]) {
+		return [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"client_mtime"]];
+	}
+	return nil;
+}
+
+- (NSString *)path {
+	return [dict objectForKey:@"path"];
+}
+
+- (BOOL)isDirectory {
+	return [[dict objectForKey:@"is_dir"] boolValue];
+}
+
+- (NSArray *)contents {
+	if (![dict objectForKey:@"contents"]) return nil;
+
+	NSArray *subfileDicts = [dict objectForKey:@"contents"];
+	NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity:[subfileDicts count]];
+	for (NSDictionary *subfileDict in subfileDicts) {
+		DBMetadata *subfile = [[DBMetadata alloc] initWithDictionary:subfileDict];
+		[result addObject:subfile];
+	}
+
+	return result;
+}
+
+- (NSString *)hash {
+	return [dict objectForKey:@"hash"];
+}
+
+- (NSString *)humanReadableSize {
+	return [dict objectForKey:@"size"];
+}
+
+- (NSString *)root {
+	return [dict objectForKey:@"root"];
+}
+
+- (NSString *)icon {
+	return [dict objectForKey:@"icon"];
+}
+
+- (NSString *)rev {
+	return [dict objectForKey:@"rev"];
+}
+
+- (long long)revision {
+ 	// Deprecated; will be removed in version 2. Use rev whenever possible
+	return [[dict objectForKey:@"revision"] longLongValue];
+}
+
+- (BOOL)isDeleted {
+	return [[dict objectForKey:@"is_deleted"] boolValue];
+}
 
 - (BOOL)isEqual:(id)object {
     if (object == self) return YES;
@@ -90,49 +127,20 @@
 }
 
 - (NSString *)filename {
-    if (filename == nil) {
-        filename = [path lastPathComponent];
-    }
-    return filename;
+	return [self.path lastPathComponent];
 }
 
 #pragma mark NSCoding methods
 
 - (id)initWithCoder:(NSCoder*)coder {
     if ((self = [super init])) {
-        thumbnailExists = [coder decodeBoolForKey:@"thumbnailExists"];
-        totalBytes = [coder decodeInt64ForKey:@"totalBytes"];
-        lastModifiedDate = [coder decodeObjectForKey:@"lastModifiedDate"];
-        clientMtime = [coder decodeObjectForKey:@"clientMtime"];
-        path = [coder decodeObjectForKey:@"path"];
-        isDirectory = [coder decodeBoolForKey:@"isDirectory"];
-        contents = [coder decodeObjectForKey:@"contents"];
-        hash = [coder decodeObjectForKey:@"hash"];
-        humanReadableSize = [coder decodeObjectForKey:@"humanReadableSize"];
-        root = [coder decodeObjectForKey:@"root"];
-        icon = [coder decodeObjectForKey:@"icon"];
-        rev = [coder decodeObjectForKey:@"rev"];
-        revision = [coder decodeInt64ForKey:@"revision"];
-        isDeleted = [coder decodeBoolForKey:@"isDeleted"];
+		dict = [coder decodeObjectForKey:@"dict"];
     }
     return self;
 }
 
 - (void)encodeWithCoder:(NSCoder*)coder {
-    [coder encodeBool:thumbnailExists forKey:@"thumbnailExists"];
-    [coder encodeInt64:totalBytes forKey:@"totalBytes"];
-    [coder encodeObject:lastModifiedDate forKey:@"lastModifiedDate"];
-    [coder encodeObject:clientMtime forKey:@"clientMtime"];
-    [coder encodeObject:path forKey:@"path"];
-    [coder encodeBool:isDirectory forKey:@"isDirectory"];
-    [coder encodeObject:contents forKey:@"contents"];
-    [coder encodeObject:hash forKey:@"hash"];
-    [coder encodeObject:humanReadableSize forKey:@"humanReadableSize"];
-    [coder encodeObject:root forKey:@"root"];
-    [coder encodeObject:icon forKey:@"icon"];
-    [coder encodeObject:rev forKey:@"rev"];
-    [coder encodeInt64:revision forKey:@"revision"];
-    [coder encodeBool:isDeleted forKey:@"isDeleted"];
+	[coder encodeObject:dict forKey:@"dict"];
 }
 
 @end

@@ -7,26 +7,10 @@
 //
 
 
-@interface DBMetadata : NSObject <NSCoding> {
-    BOOL thumbnailExists;
-    long long totalBytes;
-    NSDate* lastModifiedDate;
-    NSDate *clientMtime; // file's mtime for display purposes only
-    NSString* path;
-    BOOL isDirectory;
-    NSArray* contents;
-    NSString* hash;
-    NSString* humanReadableSize;
-    NSString* root;
-    NSString* icon;
-    NSString* rev;
-    long long revision; // Deprecated; will be removed in version 2. Use rev whenever possible
-    BOOL isDeleted;
+@interface DBMetadata : NSObject <NSCoding>
 
-    NSString *filename;
-}
-
-- (id)initWithDictionary:(NSDictionary*)dict;
+- (id)initWithDictionary:(NSDictionary *)dict;
+- (NSDictionary *)dictionary;
 
 @property (nonatomic, readonly) BOOL thumbnailExists;
 @property (nonatomic, readonly) long long totalBytes;
