@@ -254,8 +254,7 @@ static id networkRequestDelegate = nil;
             
             BOOL success = [fileManager moveItemAtPath:tempFilename toPath:resultFilename error:&moveError];
             if (!success) {
-                DBLogError(@"DBRequest#connectionDidFinishLoading: error moving temp file to desired location: %@",
-                    [moveError localizedDescription]);
+                DBLogError(@"DBRequest#connectionDidFinishLoading: error moving temp file to desired location: %@", [moveError localizedDescription]);
                 [self setError:[NSError errorWithDomain:moveError.domain code:moveError.code userInfo:self.userInfo]];
             }
         }
