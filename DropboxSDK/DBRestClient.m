@@ -86,7 +86,13 @@
 }
 
 
+- (BOOL)active {
+	return [requestQueue operationCount] > 0;
+}
+
 - (void)cancelAllRequests {
+	[requestQueue cancelAllOperations];
+
 	@synchronized (requests) {
 		for (DBRequest* request in requests) [request cancel];
 		[requests removeAllObjects];

@@ -35,8 +35,9 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 @interface DBRestClient : NSObject
 
 @property (nonatomic, weak) NSObject<DBRestClientDelegate> *delegate;
-@property (nonatomic) NSInteger maxConcurrentConnectionCount;
 
+@property (nonatomic) NSInteger maxConcurrentConnectionCount;
+@property (readonly) BOOL active;
 
 - (id)initWithSession:(DBSession*)session;
 - (id)initWithSession:(DBSession *)session userId:(NSString *)userId;
