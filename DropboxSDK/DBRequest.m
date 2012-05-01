@@ -14,17 +14,14 @@
 
 static id networkRequestDelegate = nil;
 
+@class DBRequest;
+
 @interface DBRequest () {
     NSURLRequest* request;
 	BOOL finished;
-    id target;
-    SEL selector;
     NSURLConnection* urlConnection;
     NSFileHandle* fileHandle;
 	
-    SEL failureSelector;
-    SEL downloadProgressSelector;
-    SEL uploadProgressSelector;
     NSString* resultFilename;
     NSString* tempFilename;
     NSDictionary* userInfo;
@@ -36,6 +33,7 @@ static id networkRequestDelegate = nil;
     CGFloat uploadProgress;
     NSMutableData* resultData;
     NSError* error;
+	
 }
 
 - (void)setError:(NSError *)error;
@@ -45,9 +43,11 @@ static id networkRequestDelegate = nil;
 
 @implementation DBRequest
 
-@synthesize failureSelector;
-@synthesize downloadProgressSelector;
-@synthesize uploadProgressSelector;
+@synthesize completionBlock = _completionBlock;
+@synthesize failureBlock = _failureBlock;
+@synthesize downloadProgressBlock = _downloadProgressBlock;
+@synthesize uploadProgressBlock = _uploadProgressBlock;
+
 @synthesize userInfo;
 @synthesize request;
 @synthesize response;
@@ -62,18 +62,17 @@ static id networkRequestDelegate = nil;
     networkRequestDelegate = delegate;
 }
 
-- (id)initWithURLRequest:(NSURLRequest*)aRequest andInformTarget:(id)aTarget selector:(SEL)aSelector {
+- (id)initWithURLRequest:(NSURLRequest *)aRequest completionBlock:(DBRequestBlock)completionBlock {
     if ((self = [super init])) {
         request = aRequest;
-        target = aTarget;
-        selector = aSelector;
+		_completionBlock = completionBlock;
     }
+	
     return self;
 }
 
 - (void) dealloc {
     [urlConnection cancel];
-    
 }
 
 - (void)networkRequestStopped {
@@ -82,8 +81,7 @@ static id networkRequestDelegate = nil;
 }
 
 - (NSString*)resultString {
-    return [[NSString alloc] 
-             initWithData:resultData encoding:NSUTF8StringEncoding];
+    return [[NSString alloc] initWithData:resultData encoding:NSUTF8StringEncoding];
 }
 
 - (NSObject*)resultJSON {
@@ -118,7 +116,7 @@ static id networkRequestDelegate = nil;
 
 - (void)cancel {
     [urlConnection cancel];
-    target = nil;
+	_completionBlock = nil;
     
     if (tempFilename) {
         [fileHandle closeFile];
@@ -143,8 +141,8 @@ static id networkRequestDelegate = nil;
 
 #pragma mark - NSURLConnection delegate methods
 
-- (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)aResponse {
-    response = (NSHTTPURLResponse*)aResponse;
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse*)aResponse {
+    response = (NSHTTPURLResponse *)aResponse;
 
     // Parse out the x-response-metadata as JSON.
 	NSString *xDropboxMetadataString = [[response allHeaderFields] objectForKey:@"X-Dropbox-Metadata"];
@@ -185,11 +183,12 @@ static id networkRequestDelegate = nil;
             [[NSFileManager defaultManager] removeItemAtPath:tempFilename error:nil];
             [self setError:[NSError errorWithDomain:DBErrorDomain code:DBErrorInsufficientDiskSpace userInfo:userInfo]];
             
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
-            SEL sel = failureSelector ? failureSelector : selector;
-            [target performSelector:sel withObject:self];
-#pragma clang diagnostic pop
+			if (_failureBlock) {
+				_failureBlock(self);
+			}
+			else {
+				_completionBlock(self);
+			}
             
 			[self networkRequestStopped];
             
@@ -208,12 +207,7 @@ static id networkRequestDelegate = nil;
     long long responseBodySize = [self responseBodySize];
     if (responseBodySize > 0) {
         downloadProgress = (CGFloat)bytesDownloaded / (CGFloat)responseBodySize;
-        if (downloadProgressSelector) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
-            [target performSelector:downloadProgressSelector withObject:self];
-#pragma clang diagnostic pop
-        }
+		if (_downloadProgressBlock) _downloadProgressBlock(self);
     }
 }
 
@@ -269,11 +263,7 @@ static id networkRequestDelegate = nil;
         tempFilename = nil;
     }
     
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
-    SEL sel = (error && failureSelector) ? failureSelector : selector;
-    [target performSelector:sel withObject:self];
-#pragma clang diagnostic pop
+	_failureBlock ? _failureBlock(self) : _completionBlock(self);
 	
     [self networkRequestStopped];
 }
@@ -296,11 +286,7 @@ static id networkRequestDelegate = nil;
         tempFilename = nil;
     }
     
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
-    SEL sel = failureSelector ? failureSelector : selector;
-    [target performSelector:sel withObject:self];
-#pragma clang diagnostic pop
+	_failureBlock ? _failureBlock(self) : _completionBlock(self);
 
 	[self networkRequestStopped];
 }
@@ -309,13 +295,8 @@ static id networkRequestDelegate = nil;
     totalBytesWritten:(NSInteger)totalBytesWritten 
     totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"			
     uploadProgress = (CGFloat)totalBytesWritten / (CGFloat)totalBytesExpectedToWrite;
-    if (uploadProgressSelector) {
-        [target performSelector:uploadProgressSelector withObject:self];
-    }
-#pragma clang diagnostic pop
+    if (_uploadProgressBlock) _uploadProgressBlock(self);
 }
 
 - (NSCachedURLResponse *)connection:(NSURLConnection *)connection willCacheResponse:(NSCachedURLResponse *)response {

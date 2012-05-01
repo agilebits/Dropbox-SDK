@@ -7,7 +7,10 @@
 //
 //	March 2012. Roustem Karimov. Changed DBRequest to subclass NSOperation
 
+@class DBRequest;
 @protocol DBNetworkRequestDelegate;
+
+typedef void (^DBRequestBlock)(DBRequest *request);
 
 /* DBRestRequest will download a URL either into a file that you provied the name to or it will
    create an NSData object with the result. When it has completed downloading the URL, it will
@@ -19,7 +22,7 @@
 + (void)setNetworkRequestDelegate:(id<DBNetworkRequestDelegate>)delegate;
 
 /*  This constructor downloads the URL into the resultData object */
-- (id)initWithURLRequest:(NSURLRequest*)request andInformTarget:(id)target selector:(SEL)selector;
+- (id)initWithURLRequest:(NSURLRequest *)aRequest completionBlock:(DBRequestBlock)completionBlock;
 
 /*  Cancels the request and prevents it from sending additional messages to the delegate. */
 - (void)cancel;
@@ -28,11 +31,13 @@
    correct type. If not, it will set the error object with an error code of DBErrorInvalidResponse */
 - (id)parseResponseAsType:(Class)cls;
 
-@property (nonatomic) SEL failureSelector; // To send failure events to a different selector set this
-@property (nonatomic) SEL downloadProgressSelector; // To receive download progress events set this
-@property (nonatomic) SEL uploadProgressSelector; // To receive upload progress events set this
 @property (nonatomic) NSString* resultFilename; // The file to put the HTTP body in, otherwise body is stored in resultData
 @property (nonatomic) NSDictionary* userInfo;
+
+@property (nonatomic, strong) DBRequestBlock completionBlock;
+@property (nonatomic, strong) DBRequestBlock failureBlock;
+@property (nonatomic, strong) DBRequestBlock uploadProgressBlock;
+@property (nonatomic, strong) DBRequestBlock downloadProgressBlock;
 
 @property (nonatomic, readonly) NSURLRequest* request;
 @property (nonatomic, readonly) NSHTTPURLResponse* response;

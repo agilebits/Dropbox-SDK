@@ -14,7 +14,25 @@
 @class DBAccountInfo;
 @class DBMetadata;
 
-@interface DBRestClient : NSObject 
+typedef void (^DBMetadataCompletionBlock)(NSError *error, BOOL changed, DBMetadata *metadata);
+typedef void (^DBDeltaCompletionBlock)(NSError *error, NSArray *entryArrays, BOOL shouldReset, NSString *cursor, BOOL hasMore);
+typedef void (^DBLoadFileCompletionBlock)(NSError *error, NSString *contentType, DBMetadata *metadata);
+typedef void (^DBLoadThumbnailCompletionBlock)(NSError *error, NSString *filename, DBMetadata *metadata);
+typedef void (^DBUploadFileCompletionBlock)(NSError *error, DBMetadata *metadata);
+typedef void (^DBLoadRevisionsCompletionBlock)(NSError *error, NSArray *revisions);
+typedef void (^DBRestoreFileCompletionBlock)(NSError *error, DBMetadata *metadata);
+typedef void (^DBMoveFileCompletionBlock)(NSError *error);
+typedef void (^DBCopyFileCompletionBlock)(NSError *error);
+typedef void (^DBCreateCopyRefCompletionBlock)(NSError *error, NSString *copyRef);
+typedef void (^DBCopyFromRefCompletionBlock)(NSError *error, DBMetadata *metadata);
+typedef void (^DBDeletePathCompletionBlock)(NSError *error);
+typedef void (^DBCreateFolderCompletionBlock)(NSError *error, DBMetadata *metadata);
+typedef void (^DBLoadAccountCompletionBlock)(NSError *error, DBAccountInfo *accountInfo);
+typedef void (^DBSearchPathCompletionBlock)(NSError *error, NSArray *results);
+typedef void (^DBLoadShareableLinkCompletionBlock)(NSError *error, NSString *shareableLink);
+typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
+
+@interface DBRestClient : NSObject
 
 @property (nonatomic, weak) NSObject<DBRestClientDelegate> *delegate;
 @property (nonatomic) NSInteger maxConcurrentConnectionCount;
@@ -28,70 +46,63 @@
 
 /* Loads metadata for the object at the given root/path and returns the result to the delegate as a 
    dictionary */
-- (void)loadMetadata:(NSString*)path withHash:(NSString*)hash;
-
-- (void)loadMetadata:(NSString*)path;
+- (void)loadMetadata:(NSString*)path withHash:(NSString*)hash completion:(DBMetadataCompletionBlock)completion;
+- (void)loadMetadata:(NSString*)path completion:(DBMetadataCompletionBlock)completion;
 
 /* This will load the metadata of a file at a given rev */
-- (void)loadMetadata:(NSString *)path atRev:(NSString *)rev;
+- (void)loadMetadata:(NSString *)path atRev:(NSString *)rev completion:(DBMetadataCompletionBlock)completion;
 
 /* Loads a list of files (represented as DBDeltaEntry objects) that have changed since the cursor was generated */
-- (void)loadDelta:(NSString *)cursor;
+- (void)loadDelta:(NSString *)cursor completion:(DBDeltaCompletionBlock)completion;
 
 /* Loads the file contents at the given root/path and stores the result into destinationPath */
-- (void)loadFile:(NSString *)path intoPath:(NSString *)destinationPath;
+- (void)loadFile:(NSString *)path intoPath:(NSString *)destinationPath completion:(DBLoadFileCompletionBlock)completion;
 
 /* This will load a file as it existed at a given rev */
-- (void)loadFile:(NSString *)path atRev:(NSString *)rev intoPath:(NSString *)destPath;
-
+- (void)loadFile:(NSString *)path atRev:(NSString *)rev intoPath:(NSString *)destPath completion:(DBLoadFileCompletionBlock)completion;
 - (void)cancelFileLoad:(NSString*)path;
 
 
-- (void)loadThumbnail:(NSString *)path ofSize:(NSString *)size intoPath:(NSString *)destinationPath;
+- (void)loadThumbnail:(NSString *)path ofSize:(NSString *)size intoPath:(NSString *)destinationPath completion:(DBLoadThumbnailCompletionBlock)completion;
 - (void)cancelThumbnailLoad:(NSString*)path size:(NSString*)size;
 
 /* Uploads a file that will be named filename to the given path on the server. sourcePath is the
    full path of the file you want to upload. If you are modifying a file, parentRev represents the
    rev of the file before you modified it as returned from the server. If you are uploading a new
    file set parentRev to nil. */
-- (void)uploadFile:(NSString *)filename toPath:(NSString *)path withParentRev:(NSString *)parentRev
-    fromPath:(NSString *)sourcePath;
-
+- (void)uploadFile:(NSString *)filename toPath:(NSString *)path withParentRev:(NSString *)parentRev fromPath:(NSString *)sourcePath completion:(DBUploadFileCompletionBlock)completion;
 - (void)cancelFileUpload:(NSString *)path;
 
 /* Avoid using this because it is very easy to overwrite conflicting changes. Provided for backwards
    compatibility reasons only */
-- (void)uploadFile:(NSString*)filename toPath:(NSString*)path fromPath:(NSString *)sourcePath __attribute__((deprecated));
+- (void)uploadFile:(NSString*)filename toPath:(NSString*)path fromPath:(NSString *)sourcePath completion:(DBUploadFileCompletionBlock)completion __attribute__((deprecated));
 
 
 /* Loads a list of up to 10 DBMetadata objects representing past revisions of the file at path */
-- (void)loadRevisionsForFile:(NSString *)path;
+- (void)loadRevisionsForFile:(NSString *)path completion:(DBLoadRevisionsCompletionBlock)completion;
 
 /* Same as above but with a configurable limit to number of DBMetadata objects returned, up to 1000 */
-- (void)loadRevisionsForFile:(NSString *)path limit:(NSInteger)limit;
+- (void)loadRevisionsForFile:(NSString *)path limit:(NSInteger)limit completion:(DBLoadRevisionsCompletionBlock)completion;
 
 /* Restores a file at path as it existed at the given rev and returns the metadata of the restored
    file after restoration */
-- (void)restoreFile:(NSString *)path toRev:(NSString *)rev;
+- (void)restoreFile:(NSString *)path toRev:(NSString *)rev completion:(DBRestoreFileCompletionBlock)completion;
 
 /* Creates a folder at the given root/path */
-- (void)createFolder:(NSString*)path;
+- (void)createFolder:(NSString*)path completion:(DBCreateFolderCompletionBlock)completion;
 
-- (void)deletePath:(NSString*)path;
+- (void)deletePath:(NSString*)path completion:(DBDeletePathCompletionBlock)completion;
 
-- (void)copyFrom:(NSString*)from_path toPath:(NSString *)to_path;
+- (void)copyFrom:(NSString*)from_path toPath:(NSString *)to_path completion:(DBCopyFileCompletionBlock)completion;
 
-- (void)createCopyRef:(NSString *)path; // Used to copy between Dropboxes
-- (void)copyFromRef:(NSString*)copyRef toPath:(NSString *)toPath; // Takes copy ref created by above call
-- (void)moveFrom:(NSString*)from_path toPath:(NSString *)to_path;
+- (void)createCopyRef:(NSString *)path completion:(DBCreateCopyRefCompletionBlock)completion; // Used to copy between Dropboxes
+- (void)copyFromRef:(NSString*)copyRef toPath:(NSString *)toPath completion:(DBCopyFromRefCompletionBlock)completion; // Takes copy ref created by above call
+- (void)moveFrom:(NSString*)from_path toPath:(NSString *)to_path completion:(DBMoveFileCompletionBlock)completion;
 
-- (void)loadAccountInfo;
-
-- (void)searchPath:(NSString*)path forKeyword:(NSString*)keyword;
-
-- (void)loadSharableLinkForFile:(NSString *)path;
-
-- (void)loadStreamableURLForFile:(NSString *)path;
+- (void)loadAccountInfoWithCompletion:(DBLoadAccountCompletionBlock)completion;
+- (void)searchPath:(NSString*)path forKeyword:(NSString*)keyword completion:(DBSearchPathCompletionBlock)completion;
+- (void)loadSharableLinkForFile:(NSString *)path completion:(DBLoadShareableLinkCompletionBlock)completion;
+- (void)loadStreamableURLForFile:(NSString *)path completion:(DBLoadStreamableURLCompletionBlock)completion;
 
 - (NSUInteger)requestCount;
 
