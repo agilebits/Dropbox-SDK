@@ -90,6 +90,10 @@
 	return [requestQueue operationCount] > 0;
 }
 
+- (void)waitUntilAllRequestsAreCompleted {
+	[requestQueue waitUntilAllOperationsAreFinished];
+}
+
 - (void)cancelAllRequests {
 	[requestQueue cancelAllOperations];
 
@@ -119,12 +123,12 @@
 	[self cancelAllRequests];
 }
 
-- (NSInteger)maxConcurrentConnectionCount {
+- (NSInteger)maxConcurrentRequests {
 	return requestQueue.maxConcurrentOperationCount;
 }
 
-- (void)setMaxConcurrentConnectionCount:(NSInteger)maxConcurrentConnectionCount {
-	requestQueue.maxConcurrentOperationCount = maxConcurrentConnectionCount;
+- (void)setMaxConcurrentRequests:(NSInteger)maxConcurrentRequests {
+	requestQueue.maxConcurrentOperationCount = maxConcurrentRequests;
 }
 
 //- (DBRequest *)requestWithURLRequest:(NSURLRequest *)urlRequest selector:(SEL)selector {

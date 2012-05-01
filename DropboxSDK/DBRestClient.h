@@ -36,11 +36,13 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 
 @property (nonatomic, weak) NSObject<DBRestClientDelegate> *delegate;
 
-@property (nonatomic) NSInteger maxConcurrentConnectionCount;
+@property (nonatomic) NSInteger maxConcurrentRequests;
 @property (readonly) BOOL active;
 
 - (id)initWithSession:(DBSession*)session;
 - (id)initWithSession:(DBSession *)session userId:(NSString *)userId;
+
+- (void)waitUntilAllRequestsAreCompleted;
 
 /* Cancels all outstanding requests. No callback for those requests will be sent */
 - (void)cancelAllRequests;
