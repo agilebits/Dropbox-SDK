@@ -145,7 +145,7 @@
 				[delegate restClient:self metadataUnchangedAtPath:path];
 			}
 			
-			completion(nil, NO, nil);
+			if (completion) completion(nil, NO, nil);
 		} 
 		else if (request.error) {
 			[self checkForAuthenticationFailure:request];
@@ -153,7 +153,7 @@
 				[delegate restClient:self loadMetadataFailedWithError:request.error];
 			}
 			
-			completion(request.error, NO, nil);
+			if (completion) completion(request.error, NO, nil);
 		} 
 		else {
 			NSDictionary* result = (NSDictionary*)[request resultJSON];
@@ -164,7 +164,7 @@
 						[delegate restClient:self loadedMetadata:metadata];
 					}
 					
-					completion(nil, YES, metadata);
+					if (completion) completion(nil, YES, metadata);
 				}
 				else {
 					NSError *error = [NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
@@ -173,7 +173,7 @@
 						[delegate restClient:self loadMetadataFailedWithError:error];
 					}
 					
-					completion(error, NO, nil);
+					if (completion) completion(error, NO, nil);
 				}
 			});
 		}
@@ -222,7 +222,7 @@
 				[delegate restClient:self loadDeltaFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil, NO, nil, NO);
+			if (completion) completion(request.error, nil, NO, nil, NO);
 		}
 		else {
 			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -242,7 +242,7 @@
 						[delegate restClient:self loadedDeltaEntries:entryArrays reset:reset cursor:cursor hasMore:hasMore];
 					}
 					
-					completion(nil, entryArrays, reset, cursor, hasMore);
+					if (completion) completion(nil, entryArrays, reset, cursor, hasMore);
 				} 
 				else {
 					NSError *error = [NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
@@ -250,7 +250,7 @@
 					if ([delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
 						[delegate restClient:self loadDeltaFailedWithError:error];
 					}
-					completion(request.error, nil, NO, nil, NO);
+					if (completion) completion(request.error, nil, NO, nil, NO);
 				}
 			});
 		}
@@ -286,7 +286,7 @@
 				[delegate restClient:self loadFileFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil, nil);
+			if (completion) completion(request.error, nil, nil);
 		} 
 		else {
 			NSString* filename = [request.resultFilename copy];
@@ -399,7 +399,7 @@
 				[delegate restClient:self loadThumbnailFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil, nil);
+			if (completion) completion(request.error, nil, nil);
 		}
 		else {
 			NSString* filename = request.resultFilename;
@@ -414,7 +414,7 @@
 				[delegate restClient:self loadedThumbnail:filename];
 			}
 			
-			completion(nil, filename, metadata);
+			if (completion) completion(nil, filename, metadata);
 		}
 		
 		NSString* path = [request.userInfo objectForKey:@"path"];
@@ -492,7 +492,7 @@
             [delegate restClient:self uploadFileFailedWithError:error];
         }
 		
-		completion(error, nil);
+		if (completion) completion(error, nil);
         return;
     }
 	
@@ -519,7 +519,7 @@
 			if ([delegate respondsToSelector:@selector(restClient:uploadFileFailedWithError:)]) {
 				[delegate restClient:self uploadFileFailedWithError:request.error];
 			}
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		} 
 		else {
 			DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:result];
@@ -534,7 +534,7 @@
 				[delegate restClient:self uploadedFile:destPath from:sourcePath];
 			}
 			
-			completion(nil, metadata);
+			if (completion) completion(nil, metadata);
 		}
 		
 		@synchronized (uploadRequests) {
@@ -604,7 +604,7 @@
 				[delegate restClient:self loadRevisionsFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSMutableArray *revisions = [NSMutableArray arrayWithCapacity:[resp count]];
@@ -619,7 +619,7 @@
 				[delegate restClient:self loadedRevisions:revisions forFile:path];
 			}
 			
-			completion(nil, revisions);
+			if (completion) completion(nil, revisions);
 		}
 		
 		@synchronized (requests) {
@@ -650,14 +650,14 @@
 			if ([delegate respondsToSelector:@selector(restClient:restoreFileFailedWithError:)]) {
 				[delegate restClient:self restoreFileFailedWithError:request.error];
 			}
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:dict];
 			if ([delegate respondsToSelector:@selector(restClient:restoredFile:)]) {
 				[delegate restClient:self restoredFile:metadata];
 			}
-			completion(nil, metadata);
+			if (completion) completion(nil, metadata);
 		}
 		
 		@synchronized (requests) {
@@ -687,7 +687,7 @@
 				[delegate restClient:self movePathFailedWithError:request.error];
 			}
 			
-			completion(request.error);
+			if (completion) completion(request.error);
 		} 
 		else {
 			NSDictionary *params = (NSDictionary *)request.userInfo;
@@ -696,7 +696,7 @@
 				[delegate restClient:self movedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
 			}
 			
-			completion(nil);
+			if (completion) completion(nil);
 		}
 		
 		@synchronized (requests) {
@@ -724,7 +724,7 @@
 				[delegate restClient:self copyPathFailedWithError:request.error];
 			}
 			
-			completion(request.error);
+			if (completion) completion(request.error);
 		}
 		else {
 			NSDictionary *params = (NSDictionary *)request.userInfo;
@@ -733,7 +733,7 @@
 				[delegate restClient:self copiedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
 			}
 			
-			completion(nil);
+			if (completion) completion(nil);
 		}
 		
 		@synchronized (requests) {
@@ -764,7 +764,7 @@
 				[delegate restClient:self createCopyRefFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSString *copyRef = [result objectForKey:@"copy_ref"];
@@ -772,7 +772,7 @@
 				[delegate restClient:self createdCopyRef:copyRef];
 			}
 			
-			completion(nil, copyRef);
+			if (completion) completion(nil, copyRef);
 		}
 
 		@synchronized (requests) {
@@ -803,7 +803,7 @@
 				[delegate restClient:self copyFromRefFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSString *copyRef = [request.userInfo objectForKey:@"from_copy_ref"];
@@ -812,7 +812,7 @@
 				[delegate restClient:self copiedRef:copyRef to:metadata];
 			}
 			
-			completion(nil, metadata);
+			if (completion) completion(nil, metadata);
 		}
 		
 		@synchronized (requests) {
@@ -842,7 +842,7 @@
 				[delegate restClient:self deletePathFailedWithError:request.error];
 			}
 			
-			completion(request.error);
+			if (completion) completion(request.error);
 		}
 		else {
 			if ([delegate respondsToSelector:@selector(restClient:deletedPath:)]) {
@@ -850,7 +850,7 @@
 				[delegate restClient:self deletedPath:path];
 			}
 			
-			completion(nil);
+			if (completion) completion(nil);
 		}
 		
 		@synchronized (requests) {
@@ -881,7 +881,7 @@
 				[delegate restClient:self createFolderFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSDictionary* result = (NSDictionary *)[request resultJSON];
@@ -890,7 +890,7 @@
 				[delegate restClient:self createdFolder:metadata];
 			}
 			
-			completion(nil, metadata);
+			if (completion) completion(nil, metadata);
 		}
 		
 		@synchronized (requests) {
@@ -919,7 +919,7 @@
 				[delegate restClient:self loadAccountInfoFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSDictionary* result = (NSDictionary*)[request resultJSON];
@@ -928,7 +928,7 @@
 				[delegate restClient:self loadedAccountInfo:accountInfo];
 			}
 			
-			completion(nil, accountInfo);
+			if (completion) completion(nil, accountInfo);
 		}
 		
 		@synchronized (requests) {
@@ -961,7 +961,7 @@
 				[delegate restClient:self searchFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSMutableArray* results = nil;
@@ -980,7 +980,7 @@
 				[delegate restClient:self loadedSearchResults:results forPath:path keyword:keyword];
 			}
 			
-			completion(nil, results);
+			if (completion) completion(nil, results);
 		}
 		
 		@synchronized (requests) {
@@ -1010,7 +1010,7 @@
 				[delegate restClient:self loadSharableLinkFailedWithError:request.error];
 			}
 			
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSString* sharableLink = [(NSDictionary*)request.resultJSON objectForKey:@"url"];
@@ -1019,7 +1019,7 @@
 				[delegate restClient:self loadedSharableLink:sharableLink forFile:path];
 			}
 		
-			completion(nil, sharableLink);
+			if (completion) completion(nil, sharableLink);
 		}
 		
 		@synchronized (requests) {
@@ -1047,7 +1047,7 @@
 			if ([delegate respondsToSelector:@selector(restClient:loadStreamableURLFailedWithError:)]) {
 				[delegate restClient:self loadStreamableURLFailedWithError:request.error];
 			}
-			completion(request.error, nil);
+			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSDictionary *response = [request parseResponseAsType:[NSDictionary class]];
@@ -1056,7 +1056,7 @@
 			if ([delegate respondsToSelector:@selector(restClient:loadedStreamableURL:forFile:)]) {
 				[delegate restClient:self loadedStreamableURL:url forFile:path];
 			}
-			completion(nil, url);
+			if (completion) completion(nil, url);
 		}
 		
 		@synchronized (requests) {
