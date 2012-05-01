@@ -321,8 +321,10 @@
 				[invocation invoke];
 			}
 			
-			DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:metadataDict];
-			completion(nil, contentType, metadata);
+			if (completion) {
+				DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:metadataDict];
+				completion(nil, contentType, metadata);
+			}
 		}
 		
 		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{

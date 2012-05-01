@@ -76,6 +76,16 @@ static id networkRequestDelegate = nil;
 }
 
 - (void)networkRequestStopped {
+	if ([self error] && _failureBlock) {
+		_failureBlock(self);
+	}
+	else if (_completionBlock) {
+		_completionBlock(self);
+	}
+	
+	_failureBlock = nil;
+	_completionBlock = nil;
+	
     [networkRequestDelegate networkRequestStopped];
 	CFRunLoopStop(CFRunLoopGetCurrent());
 }
@@ -116,6 +126,7 @@ static id networkRequestDelegate = nil;
 
 - (void)cancel {
     [urlConnection cancel];
+	_failureBlock = nil;
 	_completionBlock = nil;
     
     if (tempFilename) {
@@ -183,13 +194,6 @@ static id networkRequestDelegate = nil;
             [[NSFileManager defaultManager] removeItemAtPath:tempFilename error:nil];
             [self setError:[NSError errorWithDomain:DBErrorDomain code:DBErrorInsufficientDiskSpace userInfo:userInfo]];
             
-			if (_failureBlock) {
-				_failureBlock(self);
-			}
-			else {
-				_completionBlock(self);
-			}
-            
 			[self networkRequestStopped];
             
             return;
@@ -253,7 +257,7 @@ static id networkRequestDelegate = nil;
             [fileManager removeItemAtPath:resultFilename error:nil];
             
             BOOL success = [fileManager moveItemAtPath:tempFilename toPath:resultFilename error:&moveError];
-            if (!success) {
+			if (!success) {
                 DBLogError(@"DBRequest#connectionDidFinishLoading: error moving temp file to desired location: %@", [moveError localizedDescription]);
                 [self setError:[NSError errorWithDomain:moveError.domain code:moveError.code userInfo:self.userInfo]];
             }
@@ -262,8 +266,6 @@ static id networkRequestDelegate = nil;
         tempFilename = nil;
     }
     
-	_failureBlock ? _failureBlock(self) : _completionBlock(self);
-	
     [self networkRequestStopped];
 }
 
@@ -279,14 +281,11 @@ static id networkRequestDelegate = nil;
         NSError* removeError;
         BOOL success = [fileManager removeItemAtPath:tempFilename error:&removeError];
         if (!success) {
-            DBLogError(@"DBRequest#connection:didFailWithError: error removing temporary file: %@", 
-                    [removeError localizedDescription]);
+            DBLogError(@"DBRequest#connection:didFailWithError: error removing temporary file: %@",  [removeError localizedDescription]);
         }
         tempFilename = nil;
     }
     
-	_failureBlock ? _failureBlock(self) : _completionBlock(self);
-
 	[self networkRequestStopped];
 }
 
