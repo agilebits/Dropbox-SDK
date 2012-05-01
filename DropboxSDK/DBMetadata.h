@@ -12,6 +12,8 @@
 - (id)initWithDictionary:(NSDictionary *)dict;
 - (NSDictionary *)dictionary;
 
+- (DBMetadata *)metadataForFilename:(NSString *)filename;
+
 @property (nonatomic, readonly) BOOL thumbnailExists;
 @property (nonatomic, readonly) long long totalBytes;
 @property (nonatomic, readonly) NSDate* lastModifiedDate;

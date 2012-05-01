@@ -8,7 +8,10 @@
 
 #import "DBMetadata.h"
 
-@interface DBMetadata ()
+@interface DBMetadata () {
+	NSMutableDictionary *_contentsByFilename;
+}
+
 @property (nonatomic, strong) NSDictionary *dict;
 @end
 
@@ -44,6 +47,19 @@
 - (NSDictionary *)dictionary {
 	return dict;
 }
+
+- (DBMetadata *)metadataForFilename:(NSString *)filename {
+	if (_contentsByFilename == nil) {
+		NSArray *contents = [self contents];
+		_contentsByFilename = [[NSMutableDictionary alloc] initWithCapacity:(1 + [contents count])];
+		for (DBMetadata *m in [self contents]) {
+			if (m.filename) [_contentsByFilename setObject:m forKey:m.filename];
+		}
+	}
+
+	return [_contentsByFilename objectForKey:filename];
+}
+
 
 - (BOOL)thumbnailExists {
 	return [[dict objectForKey:@"thumb_exists"] boolValue];
