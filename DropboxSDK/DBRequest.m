@@ -91,10 +91,14 @@ static id networkRequestDelegate = nil;
 }
 
 - (NSString*)resultString {
+	if (!resultData) return nil;
+
     return [[NSString alloc] initWithData:resultData encoding:NSUTF8StringEncoding];
 }
 
 - (NSObject*)resultJSON {
+	if (!resultData) return nil;
+	
 	NSError *jsonError = nil;
 	NSObject *result = [NSJSONSerialization JSONObjectWithData:resultData options:NSJSONReadingMutableContainers error:&jsonError];
 	if (!result && jsonError) {
