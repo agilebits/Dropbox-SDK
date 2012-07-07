@@ -4,6 +4,36 @@ Upgrade instructions
 3. Follow the installation instructions from the README to install the
    newest version of the SDK
 
+Changes from 1.2.2 to 1.2.3
+- Cancelling from the embedded login flow on iOS now correctly sends a cancel
+  url to the app delegate.
+
+Changes from 1.2.1 to 1.2.2
+- Fixes for building the OS X SDK using Xcode3 and on older versions of OS X
+- iOS authentication now happens inside an embedded web view if the
+  Dropbox app is not installed. QuartzCore is also now a required framework on
+  iOS, so you'll need to add it if you don't have it yet.
+
+Changes from 1.2 to 1.2.1
+- Made DropboxOSX.framework compatible with 32-bit apps
+- Added the -[DBRestClient cancelAllRequests] method
+- Store all access tokens in the keychain rather than userDefaults. The SDK
+  will migrate and remove existing credentials stored in your app's userDefaults
+
+Changes from 1.1 to 1.2
+- The copy and move delegate callbacks have been changed to return the metadata
+  of the file copied/moved rather than just the path it was copied/moved to.
+  The new delegate callbacks are named restClient:copiedPath:to: and
+  restClient:movedPath:to:
+- DBMetadata objects have a new field, clientMtime, which is a displayable
+  time for the last time the files contents were modified.
+- Added DropboxOSX.framework, an OSX compatible version of the Dropbox SDK
+- -[DBRestClient loadDelta:] method added, which loads a list of metadata
+  entries that have changed since the last time the method was called.
+- -[DBRestClient createCopyRef] and -[DBRestClient copyFromRef:toPath:] methods
+  were also added, which give you the ability to copy files between Dropboxes
+  without downloading and re-uploading the file
+
 Changes from 1.0 to 1.1
 - The SBJson library included in the DropboxSDK framework has been renamed to
   DBJson to prevent duplicate symbols with other libraries that use SBJson

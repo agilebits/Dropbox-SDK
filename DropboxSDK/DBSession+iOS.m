@@ -117,7 +117,7 @@ static NSString *kDBProtocolDropbox = @"dbapi-1";
         NSString *secret = [params objectForKey:@"oauth_token_secret"];
         NSString *userId = [params objectForKey:@"uid"];
         [self updateAccessToken:token accessTokenSecret:secret forUserId:userId];
-    } else if ([methodName isEqual:@"cancelled"]) {
+    } else if ([methodName isEqual:@"cancel"]) {
         DBLogInfo(@"DropboxSDK: user canceled Dropbox link");
     }
 
