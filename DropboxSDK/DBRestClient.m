@@ -36,6 +36,7 @@
 	__weak id<DBRestClientDelegate> delegate;
 	
 	NSOperationQueue *requestQueue;
+	dispatch_semaphore_t _completionSemaphore;
 }
 
 	// This method escapes all URI escape characters except /
@@ -76,6 +77,8 @@
 		requestQueue = [[NSOperationQueue alloc] init];
 		requestQueue.name = @"dropbox-request-queue";
 		requestQueue.maxConcurrentOperationCount = 8;
+		
+		_completionSemaphore = dispatch_semaphore_create(0);
     }
     return self;
 }
@@ -90,7 +93,14 @@
 	return [requestQueue operationCount] > 0;
 }
 
+- (void)submitCompletionSignal {
+	[requestQueue addOperationWithBlock:^{
+		dispatch_semaphore_signal(_completionSemaphore);
+	}];
+}
+
 - (void)waitUntilAllRequestsAreCompleted {
+	dispatch_semaphore_wait(_completionSemaphore, DISPATCH_TIME_FOREVER);
 	[requestQueue waitUntilAllOperationsAreFinished];
 }
 
@@ -116,6 +126,8 @@
 		for (DBRequest* request in [uploadRequests allValues]) [request cancel];
 		[uploadRequests removeAllObjects];
 	}
+	
+	dispatch_semaphore_signal(_completionSemaphore);
 }
 
 

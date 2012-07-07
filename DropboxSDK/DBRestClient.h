@@ -42,6 +42,7 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 - (id)initWithSession:(DBSession*)session;
 - (id)initWithSession:(DBSession *)session userId:(NSString *)userId;
 
+- (void)submitCompletionSignal;
 - (void)waitUntilAllRequestsAreCompleted;
 
 /* Cancels all outstanding requests. No callback for those requests will be sent */
