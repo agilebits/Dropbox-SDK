@@ -12,7 +12,8 @@
 
 #include <stdlib.h>
 
-static id networkRequestDelegate = nil;
+id<DBdbNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
+
 
 @class DBRequest;
 
@@ -58,8 +59,8 @@ static id networkRequestDelegate = nil;
 @synthesize resultFilename;
 @synthesize error;
 
-+ (void)setNetworkRequestDelegate:(id<DBNetworkRequestDelegate>)delegate {
-    networkRequestDelegate = delegate;
++ (void)setdbNetworkRequestDelegate:(id<DBdbNetworkRequestDelegate>)delegate {
+    dbNetworkRequestDelegate = delegate;
 }
 
 - (id)initWithURLRequest:(NSURLRequest *)aRequest completionBlock:(DBRequestBlock)completionBlock {
@@ -86,7 +87,7 @@ static id networkRequestDelegate = nil;
 	_failureBlock = nil;
 	_completionBlock = nil;
 	
-    [networkRequestDelegate networkRequestStopped];
+    [dbNetworkRequestDelegate networkRequestStopped];
 	CFRunLoopStop(CFRunLoopGetCurrent());
 }
 
