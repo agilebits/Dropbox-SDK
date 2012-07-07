@@ -41,8 +41,7 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
 - (void)setAlertView:(UIAlertView *)pAlertView {
     if (pAlertView == alertView) return;
     alertView.delegate = nil;
-    [alertView release];
-    alertView = [pAlertView retain];
+    alertView = pAlertView;
 }
 
 @synthesize hasLoaded;
@@ -54,24 +53,18 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
         self.url = connectUrl;
 
         self.title = @"Dropbox";
-        self.navigationItem.rightBarButtonItem =
-            [[[UIBarButtonItem alloc]
-              initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancel)]
-             autorelease];
+        self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancel)];
     }
     return self;
 }
 
 - (void)dealloc {
     alertView.delegate = nil;
-    [alertView release];
-    [url release];
-    if (webView.isLoading) {
+    
+	if (webView.isLoading) {
         [webView stopLoading];
     }
     webView.delegate = nil;
-    [webView release];
-    [super dealloc];
 }
 
 - (void)viewDidLoad {
@@ -79,8 +72,7 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
 
     self.view.backgroundColor = [UIColor colorWithRed:241.0/255 green:249.0/255 blue:255.0/255 alpha:1.0];
 
-    UIActivityIndicatorView *activityIndicator =
-        [[[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray] autorelease];
+    UIActivityIndicatorView *activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
     activityIndicator.autoresizingMask =
         UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |
         UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
@@ -91,7 +83,7 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
     [activityIndicator startAnimating];
     [self.view addSubview:activityIndicator];
 
-    self.webView = [[[UIWebView alloc] initWithFrame:self.view.frame] autorelease];
+    self.webView = [[UIWebView alloc] initWithFrame:self.view.frame];
     self.webView.delegate = self;
     self.webView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.webView.scalesPageToFit = YES;
@@ -104,17 +96,17 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
 
 - (void)viewDidUnload {
     [super viewDidUnload];
-    if ([webView isLoading]) {
+    
+	if ([webView isLoading]) {
         [webView stopLoading];
     }
+
     webView.delegate = nil;
-    [webView release];
     webView = nil;
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ||
-            interfaceOrientation == UIInterfaceOrientationPortrait;
+    return UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad || interfaceOrientation == UIInterfaceOrientationPortrait;
 }
 
 
@@ -169,19 +161,13 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
         // If it has loaded, it means it's a form submit, so users can cancel/retry on their own
         NSString *okStr = NSLocalizedString(@"OK", nil);
 
-        self.alertView =
-            [[[UIAlertView alloc]
-              initWithTitle:title message:message delegate:nil cancelButtonTitle:okStr otherButtonTitles:nil]
-             autorelease];
-    } else {
+        self.alertView = [[UIAlertView alloc] initWithTitle:title message:message delegate:nil cancelButtonTitle:okStr otherButtonTitles:nil];
+    }
+	else {
         // if the page hasn't loaded, this alert gives the user a way to retry
         NSString *retryStr = NSLocalizedString(@"Retry", @"Retry loading a page that has failed to load");
 
-        self.alertView =
-            [[[UIAlertView alloc]
-              initWithTitle:title message:message delegate:self cancelButtonTitle:NSLocalizedString(@"Cancel", @"")
-              otherButtonTitles:retryStr, nil]
-             autorelease];
+        self.alertView = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:NSLocalizedString(@"Cancel", @"") otherButtonTitles:retryStr, nil];
     }
 
     [self.alertView show];
@@ -195,7 +181,8 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
         [self openUrl:[request URL]];
         [self dismiss];
         return NO;
-    } else if ([[[request URL] scheme] isEqual:@"itms-apps"]) {
+    }
+	else if ([[[request URL] scheme] isEqual:@"itms-apps"]) {
 #if TARGET_IPHONE_SIMULATOR
         DBLogError(@"DropboxSDK - Can't open on simulator. Run on an iOS device to test this functionality");
 #else
@@ -203,8 +190,9 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
         [self cancelAnimated:NO];
 #endif
         return NO;
-    } else if (![[[request URL] pathComponents] isEqual:[self.url pathComponents]]) {
-        DBConnectController *childController = [[[DBConnectController alloc] initWithUrl:[request URL]] autorelease];
+    }
+	else if (![[[request URL] pathComponents] isEqual:[self.url pathComponents]]) {
+        DBConnectController *childController = [[DBConnectController alloc] initWithUrl:[request URL]];
 
         NSDictionary *queryParams = [DBSession parseURLParams:[[request URL] query]];
         NSString *title = [queryParams objectForKey:@"embed_title"];
@@ -272,7 +260,8 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
     if ([webView isLoading]) {
         [webView stopLoading];
     }
-    [self.navigationController dismissModalViewControllerAnimated:animated];
+    
+	[self.navigationController dismissViewControllerAnimated:YES completion:^{}];
 }
 
 - (void)dismiss {

@@ -92,7 +92,9 @@ static NSString *kDBProtocolDropbox = @"dbapi-1";
             navController.modalPresentationStyle = UIModalPresentationFormSheet;
         }
 		
-        [rootController presentModalViewController:navController animated:YES];
+		[rootController presentViewController:navController animated:YES completion:^{
+			
+		}];
     }
 }
 

@@ -12,7 +12,7 @@
 
 #include <stdlib.h>
 
-id<DBdbNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
+id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 
 
 @class DBRequest;
@@ -59,7 +59,7 @@ id<DBdbNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 @synthesize resultFilename;
 @synthesize error;
 
-+ (void)setdbNetworkRequestDelegate:(id<DBdbNetworkRequestDelegate>)delegate {
++ (void)setNetworkRequestDelegate:(id<DBNetworkRequestDelegate>)delegate {
     dbNetworkRequestDelegate = delegate;
 }
 
