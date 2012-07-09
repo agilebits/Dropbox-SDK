@@ -1163,7 +1163,11 @@
     NSMutableURLRequest* urlRequest = [oauthRequest 
 									   urlRequestSignedWithSecret:self.credentialStore.signingKey 
 									   usingMethod:self.credentialStore.signatureMethod];
-    [urlRequest setTimeoutInterval:20];
+	
+	NSTimeInterval timeout = [[NSUserDefaults standardUserDefaults] integerForKey:@"DropboxClientTimeout"];
+	if (timeout == 0) timeout = 45;
+	
+    [urlRequest setTimeoutInterval:timeout];
     [urlRequest setValue:[DBRestClient userAgent] forHTTPHeaderField:@"User-Agent"];
     return urlRequest;
 }
