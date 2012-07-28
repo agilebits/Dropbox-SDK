@@ -17,4 +17,9 @@
 #import "DBError.h"
 #import "NSString+Dropbox.h"
 
+#if TARGET_OS_IPHONE
 #import "DBSession+iOS.h"
+#else
+#import "DBRestClient+OSX.h"
+#import "DBAuthHelperOSX.h"
+#endif
