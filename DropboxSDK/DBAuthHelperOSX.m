@@ -43,8 +43,6 @@ NSString *DBAuthHelperOSXStateChangedNotification = @"DBAuthHelperOSXStateChange
 
 - (void)dealloc {
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	[restClient release];
-	[super dealloc];
 }
 
 
@@ -89,7 +87,6 @@ NSString *DBAuthHelperOSXStateChangedNotification = @"DBAuthHelperOSXStateChange
 - (void)restClientLoadedAccessToken:(DBRestClient *)client {
 	loading = NO;
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	[restClient autorelease]; // HAX: having this obj maintain it's own rest client maintain it's own client is bad when session unlinks. Need to fix SDK to not cause this
 	restClient = nil;
 	[self postStateChangedNotification];
 }

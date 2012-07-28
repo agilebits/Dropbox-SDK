@@ -67,7 +67,7 @@
 		MPLog(@"postDataString - %@", parameterString);
 		
 		[aRequest setURL:self.url];
-		[aRequest setValue:[NSString stringWithFormat:@"%d", [postData length]] forHTTPHeaderField:@"Content-Length"];
+		[aRequest setValue:[NSString stringWithFormat:@"%jd", (intmax_t)[postData length]] forHTTPHeaderField:@"Content-Length"];
 		[aRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
 		[aRequest setHTTPBody:postData];
 	} else {

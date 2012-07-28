@@ -29,14 +29,14 @@
 	}
 	
 	SecKeychainAddInternetPassword(NULL /* default keychain */,
-								   [serverName length], [serverName UTF8String],
-								   [securityDomain length], [securityDomain UTF8String],
-								   [uniqueName length], [uniqueName UTF8String],	/* account name */
+								   (UInt32)[serverName length], [serverName UTF8String],
+								   (UInt32)[securityDomain length], [securityDomain UTF8String],
+								   (UInt32)[uniqueName length], [uniqueName UTF8String],	/* account name */
 								   0, NULL,	/* path */
 								   0,
 								   'oaut'	/* OAuth, not an official OSType code */,
 								   kSecAuthenticationTypeDefault,
-								   [inValue length], [inValue UTF8String],
+								   (UInt32)[inValue length], [inValue UTF8String],
 								   NULL);
 }
 
@@ -55,9 +55,9 @@
 	const char *passwordString = NULL;
 	
 	OSStatus status = SecKeychainFindInternetPassword(NULL	/* default keychain */,
-													  [serverName length], [serverName UTF8String],
-													  [securityDomain length], [securityDomain UTF8String],
-													  [uniqueName length], [uniqueName UTF8String],
+													  (UInt32)[serverName length], [serverName UTF8String],
+													  (UInt32)[securityDomain length], [securityDomain UTF8String],
+													  (UInt32)[uniqueName length], [uniqueName UTF8String],
 													  0, NULL,	/* path */
 													  0,
 													  kSecProtocolTypeAny,
@@ -71,7 +71,7 @@
 		foundPassword = [[NSString alloc] initWithData:passwordStringData encoding:NSUTF8StringEncoding];
 	}
 	
-	return [foundPassword autorelease];
+	return foundPassword;
 }
 
 - (void)removeValueFromKeychainUsingName:(NSString *)inName {

@@ -37,8 +37,8 @@ static SecKeychainItemRef itemRef;
 
 	UInt32 dataLen = 0;
 	void *pData = NULL;
-	OSStatus status = SecKeychainFindGenericPassword(NULL, strlen(kDBServiceName), kDBServiceName,
-													 strlen(kDBAccountName), kDBAccountName,
+	OSStatus status = SecKeychainFindGenericPassword(NULL, (UInt32)strlen(kDBServiceName), kDBServiceName,
+													 (UInt32)strlen(kDBAccountName), kDBAccountName,
 													 &dataLen, &pData, &itemRef);
 
 	NSDictionary *ret = nil;
@@ -62,11 +62,11 @@ static SecKeychainItemRef itemRef;
 
 	OSStatus status = noErr;
 	if (!itemRef) {
-		status = SecKeychainAddGenericPassword(NULL, strlen(kDBServiceName), kDBServiceName,
-											   strlen(kDBAccountName), kDBAccountName,
-											   [data length], [data bytes], &itemRef);
+		status = SecKeychainAddGenericPassword(NULL, (UInt32)strlen(kDBServiceName), kDBServiceName,
+											   (UInt32)strlen(kDBAccountName), kDBAccountName,
+											   (UInt32)[data length], [data bytes], &itemRef);
 	} else {
-		status = SecKeychainItemModifyAttributesAndData(itemRef, NULL, [data length], [data bytes]);
+		status = SecKeychainItemModifyAttributesAndData(itemRef, NULL, (UInt32)[data length], [data bytes]);
 	}
 
 	if (status != noErr) {

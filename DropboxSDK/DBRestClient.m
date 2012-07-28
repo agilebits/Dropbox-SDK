@@ -21,13 +21,7 @@
 #import "NSString+URLEscapingAdditions.h"
 
 
-@interface DBRestClient () {
-	DBSession* session;
-	NSString* userId;
-	NSString* root;
-
-	NSMutableSet* requests;
-	
+@interface DBRestClient () {	
 	/* Map from path to the load request. Needs to be expanded to a general framework for cancelling
 	 requests. */
 	NSMutableDictionary* loadRequests;
@@ -35,7 +29,6 @@
 	NSMutableDictionary* uploadRequests;
 	__weak id<DBRestClientDelegate> delegate;
 	
-	NSOperationQueue *requestQueue;
 	dispatch_semaphore_t _completionSemaphore;
 }
 
@@ -608,7 +601,7 @@
 
 - (void)loadRevisionsForFile:(NSString *)path limit:(NSInteger)limit completion:(DBLoadRevisionsCompletionBlock)completion {
     NSString *fullPath = [NSString stringWithFormat:@"/revisions/%@%@", root, path];
-    NSString *limitStr = [NSString stringWithFormat:@"%d", limit];
+    NSString *limitStr = [NSString stringWithFormat:@"%jd", (intmax_t)limit];
     NSDictionary *params = [NSDictionary dictionaryWithObject:limitStr forKey:@"rev_limit"];
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params];
     

@@ -172,7 +172,7 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
         // File is downloaded into a temporary file and then moved over when completed successfully
 
 		NSString *filenameTemplate = [NSString stringWithFormat:@"%@/dropbox.XXXXXXXXXX", NSTemporaryDirectory()];
-		int len = [filenameTemplate lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+		NSUInteger len = [filenameTemplate lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
 		NSMutableData *filename = [NSMutableData dataWithBytes:[filenameTemplate UTF8String] length:(len + 1)];
 		
 		int fd = mkstemp([filename mutableBytes]);

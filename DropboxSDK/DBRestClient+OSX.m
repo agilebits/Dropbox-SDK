@@ -48,37 +48,37 @@
 }
 
 - (void)loadRequestToken {
-    NSURLRequest *urlRequest =
-        [self requestWithHost:kDBDropboxAPIHost path:@"/oauth/request_token" parameters:nil];
+    NSURLRequest *urlRequest = [self requestWithHost:kDBDropboxAPIHost path:@"/oauth/request_token" parameters:nil];
 
-    DBRequest *request =
-        [[[DBRequest alloc]
-          initWithURLRequest:urlRequest andInformTarget:self selector:@selector(requestDidLoadRequestToken:)]
-         autorelease];
-
-    [requests addObject:request];
+	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		id<DBRestClientOSXDelegate> delegateExt = (id<DBRestClientOSXDelegate>)self.delegate;
+		if (request.error) {
+			if ([delegateExt respondsToSelector:@selector(restClient:loadRequestTokenFailedWithError:)]) {
+				[delegateExt restClient:self loadRequestTokenFailedWithError:request.error];
+			}
+		}
+		else {
+			NSString *token = nil;
+			NSString *secret = nil;
+			[self parse:[request resultString] intoToken:&token secret:&secret userId:nil];
+			self.credentialStore.requestToken = token;
+			self.credentialStore.requestTokenSecret = secret;
+			if ([delegateExt respondsToSelector:@selector(restClientLoadedRequestToken:)]) {
+				[delegateExt restClientLoadedRequestToken:self];
+			}
+		}
+		
+		@synchronized (requests) {
+			[requests removeObject:request];
+		}
+	}];
+	
+	@synchronized (requests) {
+		[requests addObject:operation];
+	}
+	
+	[requestQueue addOperation:operation];
 }
-
-- (void)requestDidLoadRequestToken:(DBRequest *)request {
-    id<DBRestClientOSXDelegate> delegateExt = (id<DBRestClientOSXDelegate>)delegate;
-    if (request.error) {
-        if ([delegateExt respondsToSelector:@selector(restClient:loadRequestTokenFailedWithError:)]) {
-            [delegateExt restClient:self loadRequestTokenFailedWithError:request.error];
-        }
-    } else {
-        NSString *token = nil;
-        NSString *secret = nil;
-        [self parse:[request resultString] intoToken:&token secret:&secret userId:nil];
-        self.credentialStore.requestToken = token;
-        self.credentialStore.requestTokenSecret = secret;
-        if ([delegateExt respondsToSelector:@selector(restClientLoadedRequestToken:)]) {
-            [delegateExt restClientLoadedRequestToken:self];
-        }
-    }
-
-    [requests removeObject:request];
-}
-
 
 - (BOOL)requestTokenLoaded {
     return self.credentialStore.requestToken != nil;
@@ -105,46 +105,48 @@
         return;
     }
 
-    NSURLRequest *urlRequest =
-        [self requestWithHost:kDBDropboxAPIHost path:@"/oauth/access_token" parameters:nil];
+    NSURLRequest *urlRequest = [self requestWithHost:kDBDropboxAPIHost path:@"/oauth/access_token" parameters:nil];
 
-    DBRequest *request =
-         [[[DBRequest alloc]
-           initWithURLRequest:urlRequest andInformTarget:self selector:@selector(requestDidLoadAccessToken:)]
-          autorelease];
-
-    [requests addObject:request];
+    DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		id<DBRestClientOSXDelegate> delegateExt = (id<DBRestClientOSXDelegate>)self.delegate;
+		if (request.error) {
+			if (request.statusCode == 403) {
+				// request token probably no longer valid, clear it out to make sure we fetch another one
+				self.credentialStore.requestToken = nil;
+				self.credentialStore.requestTokenSecret = nil;
+			}
+			if ([delegateExt respondsToSelector:@selector(restClient:loadAccessTokenFailedWithError:)]) {
+				[delegateExt restClient:self loadAccessTokenFailedWithError:request.error];
+			}
+		}
+		else {
+			self.credentialStore.requestToken = nil;
+			self.credentialStore.requestTokenSecret = nil;
+			NSString *token = nil;
+			NSString *secret = nil;
+			NSString *uid = nil;
+			[self parse:[request resultString] intoToken:&token secret:&secret userId:&uid];
+			[session updateAccessToken:token accessTokenSecret:secret forUserId:uid];
+			if (userId == nil) {
+				// if this client used to link the first user, associate it with that user
+				userId = uid;
+			}
+			if ([delegateExt respondsToSelector:@selector(restClientLoadedAccessToken:)]) {
+				[delegateExt restClientLoadedAccessToken:self];
+			}
+		}
+		
+		@synchronized (requests) {
+			[requests removeObject:request];
+		}
+	}];
+						  
+	@synchronized (requests) {
+		[requests addObject:operation];
+	}
+	
+	[requestQueue addOperation:operation];
 }
 
-- (void)requestDidLoadAccessToken:(DBRequest *)request {
-    id<DBRestClientOSXDelegate> delegateExt = (id<DBRestClientOSXDelegate>)delegate;
-    if (request.error) {
-        if (request.statusCode == 403) {
-            // request token probably no longer valid, clear it out to make sure we fetch another one
-            self.credentialStore.requestToken = nil;
-            self.credentialStore.requestTokenSecret = nil;
-        }
-        if ([delegateExt respondsToSelector:@selector(restClient:loadAccessTokenFailedWithError:)]) {
-            [delegateExt restClient:self loadAccessTokenFailedWithError:request.error];
-        }
-    } else {
-        self.credentialStore.requestToken = nil;
-        self.credentialStore.requestTokenSecret = nil;
-        NSString *token = nil;
-        NSString *secret = nil;
-        NSString *uid = nil;
-        [self parse:[request resultString] intoToken:&token secret:&secret userId:&uid];
-        [session updateAccessToken:token accessTokenSecret:secret forUserId:uid];
-        if (userId == nil) {
-            // if this client used to link the first user, associate it with that user
-            userId = [uid retain];
-        }
-        if ([delegateExt respondsToSelector:@selector(restClientLoadedAccessToken:)]) {
-            [delegateExt restClientLoadedAccessToken:self];
-        }
-    }
-
-    [requests removeObject:request];
-}
 
 @end
