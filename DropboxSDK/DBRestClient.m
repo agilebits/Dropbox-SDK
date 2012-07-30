@@ -77,8 +77,8 @@
 }
 
 - (id)initWithSession:(DBSession *)aSession {
-//    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : nil;
-    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : kDBDropboxUnknownUserId;
+    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : nil;
+//    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : kDBDropboxUnknownUserId;
     return [self initWithSession:aSession userId:uid];
 }
 
