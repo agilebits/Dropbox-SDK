@@ -77,10 +77,14 @@
 }
 
 - (id)initWithSession:(DBSession *)aSession {
-    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : nil;
+//    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : nil;
+    NSString *uid = [aSession.userIds count] > 0 ? [aSession.userIds objectAtIndex:0] : kDBDropboxUnknownUserId;
     return [self initWithSession:aSession userId:uid];
 }
 
+- (void)dealloc {
+	[self cancelAllRequests];
+}
 
 - (BOOL)active {
 	return [requestQueue operationCount] > 0;
@@ -120,13 +124,9 @@
 		[uploadRequests removeAllObjects];
 	}
 	
-	dispatch_semaphore_signal(_completionSemaphore);
+	if (_completionSemaphore) dispatch_semaphore_signal(_completionSemaphore);
 }
 
-
-- (void)dealloc {
-	[self cancelAllRequests];
-}
 
 - (NSInteger)maxConcurrentRequests {
 	return requestQueue.maxConcurrentOperationCount;

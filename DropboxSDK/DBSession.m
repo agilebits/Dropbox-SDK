@@ -36,7 +36,9 @@ static NSString *kDBDropboxUserCredentials = @"kDBDropboxUserCredentials";
 static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
 
 
-@interface DBSession ()
+@interface DBSession () {
+	MPOAuthCredentialConcreteStore *_nilUserStore;
+}
 
 - (NSDictionary*)savedCredentials;
 - (void)saveCredentials;
@@ -140,7 +142,8 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
 
 - (MPOAuthCredentialConcreteStore *)credentialStoreForUserId:(NSString *)userId {
     if (!userId) {
-        return [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
+		if (!_nilUserStore) _nilUserStore = [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
+		return _nilUserStore;
     }
     return [credentialStores objectForKey:userId];
 }
