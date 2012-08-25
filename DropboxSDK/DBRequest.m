@@ -320,14 +320,9 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
     if (theError == error) return;
     error = theError;
 
-	NSString *errorStr = [error.userInfo objectForKey:@"error"];
-	if (!errorStr) {
-		errorStr = [error description];
-	}
-
 	if (!([error.domain isEqual:DBErrorDomain] && error.code == 304)) {
 		// Log errors unless they're 304's
-		DBLogWarning(@"DropboxSDK: error making request to %@ - %@", [request URL], errorStr);
+		DBLogWarning(@"DropboxSDK: error making request to %@ - %@", [request URL], error);
 	}
 }
 
