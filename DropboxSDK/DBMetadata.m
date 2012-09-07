@@ -12,7 +12,8 @@
 	NSMutableDictionary *_contentsByFilename;
 }
 
-@property (nonatomic, strong) NSDictionary *dict;
+@property (nonatomic, strong) NSDictionary * dict;
+@property (nonatomic, strong) NSDate * cachedClientMtime;
 @end
 
 @implementation DBMetadata
@@ -78,11 +79,14 @@
 }
 
 - (NSDate *)clientMtime {
+	if (_cachedClientMtime) return _cachedClientMtime;
+	
  	// file's mtime for display purposes only
 	if ([dict objectForKey:@"client_mtime"]) {
-		return [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"client_mtime"]];
+		_cachedClientMtime = [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"client_mtime"]];
 	}
-	return nil;
+	
+	return _cachedClientMtime;
 }
 
 - (NSString *)path {
