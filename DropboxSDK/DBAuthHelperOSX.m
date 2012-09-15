@@ -18,6 +18,7 @@ NSString *DBAuthHelperOSXStateChangedNotification = @"DBAuthHelperOSXStateChange
 - (void)postStateChangedNotification;
 
 @property (nonatomic, readonly) DBRestClient *restClient;
+@property BOOL waitingForAccess;
 
 @end
 
@@ -68,12 +69,16 @@ NSString *DBAuthHelperOSXStateChangedNotification = @"DBAuthHelperOSXStateChange
 
 - (void)restClientLoadedRequestToken:(DBRestClient *)restClient {
     loading = NO;
+
 	[self postStateChangedNotification];
 
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidBecomeActive:) name:NSApplicationDidBecomeActiveNotification object:nil];
 
     NSURL *url = [self.restClient authorizeURL];
     [[NSWorkspace sharedWorkspace] openURL:url];
+    
+    self.waitingForAccess = YES;
+    [self waitForAccess];
 }
 
 - (void)restClient:(DBRestClient *)restClient loadRequestTokenFailedWithError:(NSError *)error {
@@ -85,14 +90,20 @@ NSString *DBAuthHelperOSXStateChangedNotification = @"DBAuthHelperOSXStateChange
 }
 
 - (void)restClientLoadedAccessToken:(DBRestClient *)client {
+    NSLog(@"Dropbox Access Granted");
+    
 	loading = NO;
+    self.waitingForAccess = NO;
+    
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	restClient = nil;
+	
+    restClient = nil;
 	[self postStateChangedNotification];
 }
 
 - (void)restClient:(DBRestClient *)restClient loadAccessTokenFailedWithError:(NSError *)error {
     loading = NO;
+
 	[self postStateChangedNotification];
 }
 
@@ -117,6 +128,19 @@ NSString *DBAuthHelperOSXStateChangedNotification = @"DBAuthHelperOSXStateChange
 
 		[self.restClient loadAccessToken];
 	}
+}
+
+- (void)waitForAccess {
+    while (self.waitingForAccess)
+    {
+        NSLog(@"Waiting for Dropbox Access");
+        
+        if ([self.restClient requestTokenLoaded] && !loading) {
+            [self.restClient loadAccessToken];
+        }
+        
+        [NSThread sleepForTimeInterval:10.0];
+    }
 }
 
 @end
