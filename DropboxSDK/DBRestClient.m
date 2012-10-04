@@ -84,6 +84,11 @@
 
 - (void)dealloc {
 	[self cancelAllRequests];
+	
+	if (_completionSemaphore) {
+		dispatch_release(_completionSemaphore);
+		_completionSemaphore = 0;
+	}
 }
 
 - (BOOL)active {
