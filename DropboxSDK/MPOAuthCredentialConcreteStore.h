@@ -12,8 +12,8 @@
 
 @interface MPOAuthCredentialConcreteStore : NSObject <MPOAuthCredentialStore, MPOAuthParameterFactory>
 
-@property (readonly) NSURL *baseURL;
-@property (readonly) NSURL *authenticationURL;
+@property (nonatomic, readonly) NSURL *baseURL;
+@property (nonatomic, readonly) NSURL *authenticationURL;
 
 @property (nonatomic, readonly) NSString *tokenSecret;
 @property (nonatomic, readonly) NSString *signingKey;

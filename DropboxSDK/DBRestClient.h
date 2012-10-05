@@ -84,11 +84,6 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 - (void)uploadFile:(NSString *)filename toPath:(NSString *)path withParentRev:(NSString *)parentRev fromPath:(NSString *)sourcePath completion:(DBUploadFileCompletionBlock)completion;
 - (void)cancelFileUpload:(NSString *)path;
 
-/* Avoid using this because it is very easy to overwrite conflicting changes. Provided for backwards
-   compatibility reasons only */
-- (void)uploadFile:(NSString*)filename toPath:(NSString*)path fromPath:(NSString *)sourcePath completion:(DBUploadFileCompletionBlock)completion __attribute__((deprecated));
-
-
 /* Loads a list of up to 10 DBMetadata objects representing past revisions of the file at path */
 - (void)loadRevisionsForFile:(NSString *)path completion:(DBLoadRevisionsCompletionBlock)completion;
 

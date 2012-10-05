@@ -20,8 +20,6 @@ extern NSString * const MPOAuthCredentialSessionHandleKey;
 
 @interface MPOAuthCredentialConcreteStore ()
 @property NSMutableDictionary *store;
-@property NSURL *baseURL;
-@property NSURL *authenticationURL;
 @end
 
 @implementation MPOAuthCredentialConcreteStore
@@ -37,8 +35,8 @@ extern NSString * const MPOAuthCredentialSessionHandleKey;
 - (id)initWithCredentials:(NSDictionary *)inCredentials forBaseURL:(NSURL *)inBaseURL withAuthenticationURL:(NSURL *)inAuthenticationURL {
 	if ((self = [super init])) {
 		_store = [[NSMutableDictionary alloc] initWithDictionary:inCredentials];
-		self.baseURL = inBaseURL;
-		self.authenticationURL = inAuthenticationURL;
+		_baseURL = inBaseURL;
+		_authenticationURL = inAuthenticationURL;
     }
 	return self;
 }

@@ -569,11 +569,6 @@
 	[requestQueue addOperation:operation];
 }
 
-- (void)uploadFile:(NSString*)filename toPath:(NSString*)path fromPath:(NSString *)sourcePath completion:(DBUploadFileCompletionBlock)completion
-{
-    [self uploadFile:filename toPath:path fromPath:sourcePath params:nil completion:completion];
-}
-
 - (void)uploadFile:(NSString *)filename toPath:(NSString *)path withParentRev:(NSString *)parentRev fromPath:(NSString *)sourcePath completion:(DBUploadFileCompletionBlock)completion  {
 	
     NSMutableDictionary *params = [NSMutableDictionary dictionaryWithObject:@"false" forKey:@"overwrite"];

@@ -94,19 +94,14 @@ extern id<DBNetworkRequestDelegate> dbNetworkRequestDelegate;
     [self loadRequest];
 }
 
-- (void)viewDidUnload {
-    [super viewDidUnload];
-    
-	if ([webView isLoading]) {
-        [webView stopLoading];
-    }
-
-    webView.delegate = nil;
-    webView = nil;
+- (BOOL)shouldAutorotate {
+	return YES;
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad || interfaceOrientation == UIInterfaceOrientationPortrait;
+- (NSUInteger)supportedInterfaceOrientations {
+	if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) return UIInterfaceOrientationMaskAll;
+	
+	return UIInterfaceOrientationMaskPortrait;
 }
 
 

@@ -101,6 +101,9 @@ const u_int8_t kBits_11000000 = 0xC0;
 const u_int8_t kBits_11110000 = 0xF0;
 const u_int8_t kBits_11111100 = 0xFC;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+
 size_t EstimateBas64EncodedDataSize(size_t inDataSize)
 {
 size_t theEncodedDataSize = (int)ceil(inDataSize / 3.0) * 4;
@@ -228,3 +231,5 @@ for (; theInIndex < inInputDataSize; )
 *ioOutputDataSize = theOutIndex;
 return(true);
 }
+
+#pragma clang diagnostic pop
