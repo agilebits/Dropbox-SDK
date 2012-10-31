@@ -309,7 +309,7 @@
 				[delegate restClient:self loadedFile:filename];
 			} 
 			else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:metadata:)]) {
-				DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:metadataDict];
+				DBMetadata* metadata = metadataDict ? [[DBMetadata alloc] initWithDictionary:metadataDict] : nil;
 				[delegate restClient:self loadedFile:filename contentType:contentType metadata:metadata];
 			} 
 			else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:)]) {
