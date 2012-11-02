@@ -130,16 +130,21 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 }
 
 - (void)cancel {
+	_cancelled = YES;
     [urlConnection cancel];
+
 	_failureBlock = nil;
 	_completionBlock = nil;
     
     if (tempFilename) {
-        [fileHandle closeFile];
-        NSError* rmError;
+		[fileHandle closeFile], fileHandle = nil;
+		
+        NSError *rmError;
         if (![[NSFileManager defaultManager] removeItemAtPath:tempFilename error:&rmError]) {
-            DBLogError(@"DBRequest#cancel Error removing temp file: %@", rmError);
+            DBLogError(@"DBRequest#cancel Error removing temp file '%@: %@", tempFilename, rmError);
         }
+		
+		tempFilename = nil;
     }
     
 	[self networkRequestStopped];
@@ -158,6 +163,8 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 #pragma mark - NSURLConnection delegate methods
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse*)aResponse {
+	if (_cancelled) return;
+	
     response = (NSHTTPURLResponse *)aResponse;
 
     // Parse out the x-response-metadata as JSON.
@@ -188,6 +195,8 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 }
 
 - (void)connection:(NSURLConnection*)connection didReceiveData:(NSData*)data {
+	if (_cancelled) return;
+
     if (resultFilename && [self statusCode] == 200) {
         @try {
             [fileHandle writeData:data];
@@ -221,6 +230,8 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection*)connection {
+	if (_cancelled) return;
+
     [fileHandle closeFile];
     fileHandle = nil;
     
@@ -275,6 +286,8 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 }
 
 - (void)connection:(NSURLConnection*)connection didFailWithError:(NSError*)anError {
+	if (_cancelled) return;
+
     [fileHandle closeFile];
     [self setError:[NSError errorWithDomain:anError.domain code:anError.code userInfo:self.userInfo]];
     bytesDownloaded = 0;
@@ -295,8 +308,10 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 }
 
 - (void)connection:(NSURLConnection*)connection didSendBodyData:(NSInteger)bytesWritten 
-    totalBytesWritten:(NSInteger)totalBytesWritten 
-    totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite {
+    totalBytesWritten:(NSInteger)totalBytesWritten
+    totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
+{
+	if (_cancelled) return;
 
     uploadProgress = (CGFloat)totalBytesWritten / (CGFloat)totalBytesExpectedToWrite;
     if (_uploadProgressBlock) _uploadProgressBlock(self);
