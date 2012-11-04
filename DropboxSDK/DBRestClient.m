@@ -27,7 +27,13 @@
 	NSMutableDictionary* loadRequests;
 	NSMutableDictionary* imageLoadRequests;
 	NSMutableDictionary* uploadRequests;
-	__weak id<DBRestClientDelegate> delegate;
+	NSMutableSet *requests;
+	
+	DBSession* session;
+	NSString* userId;
+	NSString* root;
+	
+	NSOperationQueue *requestQueue;
 	
 	dispatch_semaphore_t _completionSemaphore;
 }
@@ -48,8 +54,6 @@
 
 
 @implementation DBRestClient
-
-@synthesize delegate;
 
 - (id)initWithSession:(DBSession*)aSession userId:(NSString *)theUserId {
     if (!aSession) {
@@ -149,17 +153,17 @@
     
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.statusCode == 304) {
-			if ([delegate respondsToSelector:@selector(restClient:metadataUnchangedAtPath:)]) {
+			if ([_delegate respondsToSelector:@selector(restClient:metadataUnchangedAtPath:)]) {
 				NSString* path = [request.userInfo objectForKey:@"path"];
-				[delegate restClient:self metadataUnchangedAtPath:path];
+				[_delegate restClient:self metadataUnchangedAtPath:path];
 			}
 			
 			if (completion) completion(nil, NO, nil);
 		} 
 		else if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadMetadataFailedWithError:)]) {
-				[delegate restClient:self loadMetadataFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadMetadataFailedWithError:)]) {
+				[_delegate restClient:self loadMetadataFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, NO, nil);
@@ -169,8 +173,8 @@
 			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 				DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
 				if (metadata) {
-					if ([delegate respondsToSelector:@selector(restClient:loadedMetadata:)]) {
-						[delegate restClient:self loadedMetadata:metadata];
+					if ([_delegate respondsToSelector:@selector(restClient:loadedMetadata:)]) {
+						[_delegate restClient:self loadedMetadata:metadata];
 					}
 					
 					if (completion) completion(nil, YES, metadata);
@@ -178,8 +182,8 @@
 				else {
 					NSError *error = [NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
 					DBLogWarning(@"DropboxSDK: error parsing metadata");
-					if ([delegate respondsToSelector:@selector(restClient:loadMetadataFailedWithError:)]) {
-						[delegate restClient:self loadMetadataFailedWithError:error];
+					if ([_delegate respondsToSelector:@selector(restClient:loadMetadataFailedWithError:)]) {
+						[_delegate restClient:self loadMetadataFailedWithError:error];
 					}
 					
 					if (completion) completion(error, NO, nil);
@@ -227,8 +231,8 @@
     DBRequest* operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
-				[delegate restClient:self loadDeltaFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
+				[_delegate restClient:self loadDeltaFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil, NO, nil, NO);
@@ -247,8 +251,8 @@
 					NSString *cursor = [result objectForKey:@"cursor"];
 					BOOL hasMore = [[result objectForKey:@"has_more"] boolValue];
 					
-					if ([delegate respondsToSelector:@selector(restClient:loadedDeltaEntries:reset:cursor:hasMore:)]) {
-						[delegate restClient:self loadedDeltaEntries:entryArrays reset:reset cursor:cursor hasMore:hasMore];
+					if ([_delegate respondsToSelector:@selector(restClient:loadedDeltaEntries:reset:cursor:hasMore:)]) {
+						[_delegate restClient:self loadedDeltaEntries:entryArrays reset:reset cursor:cursor hasMore:hasMore];
 					}
 					
 					if (completion) completion(nil, entryArrays, reset, cursor, hasMore);
@@ -256,8 +260,8 @@
 				else {
 					NSError *error = [NSError errorWithDomain:DBErrorDomain code:DBErrorInvalidResponse userInfo:request.userInfo];
 					DBLogWarning(@"DropboxSDK: error parsing metadata");
-					if ([delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
-						[delegate restClient:self loadDeltaFailedWithError:error];
+					if ([_delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
+						[_delegate restClient:self loadDeltaFailedWithError:error];
 					}
 					if (completion) completion(request.error, nil, NO, nil, NO);
 				}
@@ -291,8 +295,8 @@
 		
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadFileFailedWithError:)]) {
-				[delegate restClient:self loadFileFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadFileFailedWithError:)]) {
+				[_delegate restClient:self loadFileFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil, nil);
@@ -305,23 +309,23 @@
 			NSString* eTag = [[headers objectForKey:@"Etag"] copy];
 			DBRestClient *myself = self;
 			
-			if ([delegate respondsToSelector:@selector(restClient:loadedFile:)]) {
-				[delegate restClient:self loadedFile:filename];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedFile:)]) {
+				[_delegate restClient:self loadedFile:filename];
 			} 
-			else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:metadata:)]) {
+			else if ([_delegate respondsToSelector:@selector(restClient:loadedFile:contentType:metadata:)]) {
 				DBMetadata* metadata = metadataDict ? [[DBMetadata alloc] initWithDictionary:metadataDict] : nil;
-				[delegate restClient:self loadedFile:filename contentType:contentType metadata:metadata];
+				[_delegate restClient:self loadedFile:filename contentType:contentType metadata:metadata];
 			} 
-			else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:)]) {
+			else if ([_delegate respondsToSelector:@selector(restClient:loadedFile:contentType:)]) {
 				// This callback is deprecated and this block exists only for backwards compatibility.
-				[delegate restClient:self loadedFile:filename contentType:contentType];
+				[_delegate restClient:self loadedFile:filename contentType:contentType];
 			} 
-			else if ([delegate respondsToSelector:@selector(restClient:loadedFile:contentType:eTag:)]) {
+			else if ([_delegate respondsToSelector:@selector(restClient:loadedFile:contentType:eTag:)]) {
 				// This code is for the official Dropbox client to get eTag information from the server
 				NSMethodSignature* signature = [self methodSignatureForSelector:@selector(restClient:loadedFile:contentType:eTag:)];
 				NSInvocation* invocation = [NSInvocation invocationWithMethodSignature:signature];
 				
-				[invocation setTarget:delegate];
+				[invocation setTarget:_delegate];
 				[invocation setSelector:@selector(restClient:loadedFile:contentType:eTag:)];
 				[invocation setArgument:&myself atIndex:2];
 				[invocation setArgument:&filename atIndex:3];
@@ -346,8 +350,8 @@
 
     operation.resultFilename = destPath;
     operation.downloadProgressBlock = ^(DBRequest *r) {
-		if ([delegate respondsToSelector:@selector(restClient:loadProgress:forFile:)]) {
-			[delegate restClient:self loadProgress:operation.downloadProgress forFile:[r.resultFilename copy]];
+		if ([_delegate respondsToSelector:@selector(restClient:loadProgress:forFile:)]) {
+			[_delegate restClient:self loadProgress:operation.downloadProgress forFile:[r.resultFilename copy]];
 		}
 	};
 	
@@ -404,8 +408,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadThumbnailFailedWithError:)]) {
-				[delegate restClient:self loadThumbnailFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadThumbnailFailedWithError:)]) {
+				[_delegate restClient:self loadThumbnailFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil, nil);
@@ -415,12 +419,12 @@
 			NSDictionary* metadataDict = [request xDropboxMetadataJSON];
 			DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:metadataDict];
 
-			if ([delegate respondsToSelector:@selector(restClient:loadedThumbnail:metadata:)]) {
-				[delegate restClient:self loadedThumbnail:filename metadata:metadata];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedThumbnail:metadata:)]) {
+				[_delegate restClient:self loadedThumbnail:filename metadata:metadata];
 			}
-			else if ([delegate respondsToSelector:@selector(restClient:loadedThumbnail:)]) {
+			else if ([_delegate respondsToSelector:@selector(restClient:loadedThumbnail:)]) {
 				// This callback is deprecated and this block exists only for backwards compatibility.
-				[delegate restClient:self loadedThumbnail:filename];
+				[_delegate restClient:self loadedThumbnail:filename];
 			}
 			
 			if (completion) completion(nil, filename, metadata);
@@ -497,8 +501,8 @@
         
 		DBLogWarning(@"DropboxSDK: %@ (%@)", errorMsg, sourcePath);
 
-        if ([delegate respondsToSelector:@selector(restClient:uploadFileFailedWithError:)]) {
-            [delegate restClient:self uploadFileFailedWithError:error];
+        if ([_delegate respondsToSelector:@selector(restClient:uploadFileFailedWithError:)]) {
+            [_delegate restClient:self uploadFileFailedWithError:error];
         }
 		
 		if (completion) completion(error, nil);
@@ -525,8 +529,8 @@
 		
 		if (!result) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:uploadFileFailedWithError:)]) {
-				[delegate restClient:self uploadFileFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:uploadFileFailedWithError:)]) {
+				[_delegate restClient:self uploadFileFailedWithError:request.error];
 			}
 			if (completion) completion(request.error, nil);
 		} 
@@ -536,11 +540,11 @@
 			NSString* sourcePath = [request.userInfo objectForKey:@"sourcePath"];
 			NSString* destPath = [request.userInfo objectForKey:@"destinationPath"];
 			
-			if ([delegate respondsToSelector:@selector(restClient:uploadedFile:from:metadata:)]) {
-				[delegate restClient:self uploadedFile:destPath from:sourcePath metadata:metadata];
+			if ([_delegate respondsToSelector:@selector(restClient:uploadedFile:from:metadata:)]) {
+				[_delegate restClient:self uploadedFile:destPath from:sourcePath metadata:metadata];
 			}
-			else if ([delegate respondsToSelector:@selector(restClient:uploadedFile:from:)]) {
-				[delegate restClient:self uploadedFile:destPath from:sourcePath];
+			else if ([_delegate respondsToSelector:@selector(restClient:uploadedFile:from:)]) {
+				[_delegate restClient:self uploadedFile:destPath from:sourcePath];
 			}
 			
 			if (completion) completion(nil, metadata);
@@ -555,8 +559,8 @@
 		NSString* sourcePath = [(NSDictionary*)operation.userInfo objectForKey:@"sourcePath"];
 		NSString* destPath = [operation.userInfo objectForKey:@"destinationPath"];
 		
-		if ([delegate respondsToSelector:@selector(restClient:uploadProgress:forFile:from:)]) {
-			[delegate restClient:self uploadProgress:operation.uploadProgress forFile:destPath from:sourcePath];
+		if ([_delegate respondsToSelector:@selector(restClient:uploadProgress:forFile:from:)]) {
+			[_delegate restClient:self uploadProgress:operation.uploadProgress forFile:destPath from:sourcePath];
 		}
 	};
 	
@@ -604,8 +608,8 @@
 		NSArray *resp = [request parseResponseAsType:[NSArray class]];
 		
 		if (!resp) {
-			if ([delegate respondsToSelector:@selector(restClient:loadRevisionsFailedWithError:)]) {
-				[delegate restClient:self loadRevisionsFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadRevisionsFailedWithError:)]) {
+				[_delegate restClient:self loadRevisionsFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
@@ -619,8 +623,8 @@
 			
 			NSString *path = [request.userInfo objectForKey:@"path"];
 			
-			if ([delegate respondsToSelector:@selector(restClient:loadedRevisions:forFile:)]) {
-				[delegate restClient:self loadedRevisions:revisions forFile:path];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedRevisions:forFile:)]) {
+				[_delegate restClient:self loadedRevisions:revisions forFile:path];
 			}
 			
 			if (completion) completion(nil, revisions);
@@ -651,15 +655,15 @@
 		NSDictionary *dict = [request parseResponseAsType:[NSDictionary class]];
 		
 		if (!dict) {
-			if ([delegate respondsToSelector:@selector(restClient:restoreFileFailedWithError:)]) {
-				[delegate restClient:self restoreFileFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:restoreFileFailedWithError:)]) {
+				[_delegate restClient:self restoreFileFailedWithError:request.error];
 			}
 			if (completion) completion(request.error, nil);
 		}
 		else {
 			DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:dict];
-			if ([delegate respondsToSelector:@selector(restClient:restoredFile:)]) {
-				[delegate restClient:self restoredFile:metadata];
+			if ([_delegate respondsToSelector:@selector(restClient:restoredFile:)]) {
+				[_delegate restClient:self restoredFile:metadata];
 			}
 			if (completion) completion(nil, metadata);
 		}
@@ -687,8 +691,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:movePathFailedWithError:)]) {
-				[delegate restClient:self movePathFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:movePathFailedWithError:)]) {
+				[_delegate restClient:self movePathFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error);
@@ -696,8 +700,8 @@
 		else {
 			NSDictionary *params = (NSDictionary *)request.userInfo;
 			
-			if ([delegate respondsToSelector:@selector(restClient:movedPath:toPath:)]) {
-				[delegate restClient:self movedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
+			if ([_delegate respondsToSelector:@selector(restClient:movedPath:toPath:)]) {
+				[_delegate restClient:self movedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
 			}
 			
 			if (completion) completion(nil);
@@ -724,8 +728,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:copyPathFailedWithError:)]) {
-				[delegate restClient:self copyPathFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:copyPathFailedWithError:)]) {
+				[_delegate restClient:self copyPathFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error);
@@ -733,8 +737,8 @@
 		else {
 			NSDictionary *params = (NSDictionary *)request.userInfo;
 			
-			if ([delegate respondsToSelector:@selector(restClient:copiedPath:toPath:)]) {
-				[delegate restClient:self copiedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
+			if ([_delegate respondsToSelector:@selector(restClient:copiedPath:toPath:)]) {
+				[_delegate restClient:self copiedPath:[params valueForKey:@"from_path"] toPath:[params valueForKey:@"to_path"]];
 			}
 			
 			if (completion) completion(nil);
@@ -764,16 +768,16 @@
 		NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
 		if (!result) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:createCopyRefFailedWithError:)]) {
-				[delegate restClient:self createCopyRefFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:createCopyRefFailedWithError:)]) {
+				[_delegate restClient:self createCopyRefFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
 		}
 		else {
 			NSString *copyRef = [result objectForKey:@"copy_ref"];
-			if ([delegate respondsToSelector:@selector(restClient:createdCopyRef:)]) {
-				[delegate restClient:self createdCopyRef:copyRef];
+			if ([_delegate respondsToSelector:@selector(restClient:createdCopyRef:)]) {
+				[_delegate restClient:self createdCopyRef:copyRef];
 			}
 			
 			if (completion) completion(nil, copyRef);
@@ -803,8 +807,8 @@
 		NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
 		if (!result) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:copyFromRefFailedWithError:)]) {
-				[delegate restClient:self copyFromRefFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:copyFromRefFailedWithError:)]) {
+				[_delegate restClient:self copyFromRefFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
@@ -812,8 +816,8 @@
 		else {
 			NSString *copyRef = [request.userInfo objectForKey:@"from_copy_ref"];
 			DBMetadata *metadata = [[DBMetadata alloc] initWithDictionary:result];
-			if ([delegate respondsToSelector:@selector(restClient:copiedRef:to:)]) {
-				[delegate restClient:self copiedRef:copyRef to:metadata];
+			if ([_delegate respondsToSelector:@selector(restClient:copiedRef:to:)]) {
+				[_delegate restClient:self copiedRef:copyRef to:metadata];
 			}
 			
 			if (completion) completion(nil, metadata);
@@ -842,16 +846,16 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:deletePathFailedWithError:)]) {
-				[delegate restClient:self deletePathFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:deletePathFailedWithError:)]) {
+				[_delegate restClient:self deletePathFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error);
 		}
 		else {
-			if ([delegate respondsToSelector:@selector(restClient:deletedPath:)]) {
+			if ([_delegate respondsToSelector:@selector(restClient:deletedPath:)]) {
 				NSString* path = [request.userInfo objectForKey:@"path"];
-				[delegate restClient:self deletedPath:path];
+				[_delegate restClient:self deletedPath:path];
 			}
 			
 			if (completion) completion(nil);
@@ -881,8 +885,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:createFolderFailedWithError:)]) {
-				[delegate restClient:self createFolderFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:createFolderFailedWithError:)]) {
+				[_delegate restClient:self createFolderFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
@@ -890,8 +894,8 @@
 		else {
 			NSDictionary* result = (NSDictionary *)[request resultJSON];
 			DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
-			if ([delegate respondsToSelector:@selector(restClient:createdFolder:)]) {
-				[delegate restClient:self createdFolder:metadata];
+			if ([_delegate respondsToSelector:@selector(restClient:createdFolder:)]) {
+				[_delegate restClient:self createdFolder:metadata];
 			}
 			
 			if (completion) completion(nil, metadata);
@@ -919,8 +923,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadAccountInfoFailedWithError:)]) {
-				[delegate restClient:self loadAccountInfoFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadAccountInfoFailedWithError:)]) {
+				[_delegate restClient:self loadAccountInfoFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
@@ -928,8 +932,8 @@
 		else {
 			NSDictionary* result = (NSDictionary*)[request resultJSON];
 			DBAccountInfo* accountInfo = [[DBAccountInfo alloc] initWithDictionary:result];
-			if ([delegate respondsToSelector:@selector(restClient:loadedAccountInfo:)]) {
-				[delegate restClient:self loadedAccountInfo:accountInfo];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedAccountInfo:)]) {
+				[_delegate restClient:self loadedAccountInfo:accountInfo];
 			}
 			
 			if (completion) completion(nil, accountInfo);
@@ -961,8 +965,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:searchFailedWithError:)]) {
-				[delegate restClient:self searchFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:searchFailedWithError:)]) {
+				[_delegate restClient:self searchFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
@@ -980,8 +984,8 @@
 			NSString* path = [request.userInfo objectForKey:@"path"];
 			NSString* keyword = [request.userInfo objectForKey:@"keyword"];
 			
-			if ([delegate respondsToSelector:@selector(restClient:loadedSearchResults:forPath:keyword:)]) {
-				[delegate restClient:self loadedSearchResults:results forPath:path keyword:keyword];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedSearchResults:forPath:keyword:)]) {
+				[_delegate restClient:self loadedSearchResults:results forPath:path keyword:keyword];
 			}
 			
 			if (completion) completion(nil, results);
@@ -1010,8 +1014,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadSharableLinkFailedWithError:)]) {
-				[delegate restClient:self loadSharableLinkFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadSharableLinkFailedWithError:)]) {
+				[_delegate restClient:self loadSharableLinkFailedWithError:request.error];
 			}
 			
 			if (completion) completion(request.error, nil);
@@ -1019,8 +1023,8 @@
 		else {
 			NSString* sharableLink = [(NSDictionary*)request.resultJSON objectForKey:@"url"];
 			NSString* path = [request.userInfo objectForKey:@"path"];
-			if ([delegate respondsToSelector:@selector(restClient:loadedSharableLink:forFile:)]) {
-				[delegate restClient:self loadedSharableLink:sharableLink forFile:path];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedSharableLink:forFile:)]) {
+				[_delegate restClient:self loadedSharableLink:sharableLink forFile:path];
 			}
 		
 			if (completion) completion(nil, sharableLink);
@@ -1048,8 +1052,8 @@
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
-			if ([delegate respondsToSelector:@selector(restClient:loadStreamableURLFailedWithError:)]) {
-				[delegate restClient:self loadStreamableURLFailedWithError:request.error];
+			if ([_delegate respondsToSelector:@selector(restClient:loadStreamableURLFailedWithError:)]) {
+				[_delegate restClient:self loadStreamableURLFailedWithError:request.error];
 			}
 			if (completion) completion(request.error, nil);
 		}
@@ -1057,8 +1061,8 @@
 			NSDictionary *response = [request parseResponseAsType:[NSDictionary class]];
 			NSURL *url = [NSURL URLWithString:[response objectForKey:@"url"]];
 			NSString *path = [request.userInfo objectForKey:@"path"];
-			if ([delegate respondsToSelector:@selector(restClient:loadedStreamableURL:forFile:)]) {
-				[delegate restClient:self loadedStreamableURL:url forFile:path];
+			if ([_delegate respondsToSelector:@selector(restClient:loadedStreamableURL:forFile:)]) {
+				[_delegate restClient:self loadedStreamableURL:url forFile:path];
 			}
 			if (completion) completion(nil, url);
 		}

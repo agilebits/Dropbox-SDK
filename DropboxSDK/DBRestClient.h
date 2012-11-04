@@ -32,16 +32,9 @@ typedef void (^DBSearchPathCompletionBlock)(NSError *error, NSArray *results);
 typedef void (^DBLoadShareableLinkCompletionBlock)(NSError *error, NSString *shareableLink);
 typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 
-@interface DBRestClient : NSObject {
-	DBSession* session;
-	NSString* userId;
-	NSString* root;
+@interface DBRestClient : NSObject 
 
-	NSMutableSet *requests;
-	NSOperationQueue *requestQueue;
-}
-
-@property (nonatomic, weak) NSObject<DBRestClientDelegate> *delegate;
+@property (nonatomic, weak) id<DBRestClientDelegate> delegate;
 
 @property (nonatomic) NSInteger maxConcurrentRequests;
 @property (readonly) BOOL active;
