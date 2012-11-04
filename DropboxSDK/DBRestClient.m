@@ -98,7 +98,7 @@
 
 - (void)waitUntilAllRequestsAreCompleted {
 	dispatch_semaphore_wait(_completionSemaphore, DISPATCH_TIME_FOREVER);
-	[requestQueue waitUntilAllOperationsAreFinished];
+	[requestQueue cancelAllOperations]; // Cancel all operations submitted after the completion signal
 }
 
 - (void)cancelAllRequests {
