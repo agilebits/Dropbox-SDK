@@ -131,11 +131,12 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 
 - (void)cancel {
 	_cancelled = YES;
-    [urlConnection cancel];
 
 	_failureBlock = nil;
 	_completionBlock = nil;
     
+    [urlConnection cancel];
+
     if (tempFilename) {
 		[fileHandle closeFile], fileHandle = nil;
 		
