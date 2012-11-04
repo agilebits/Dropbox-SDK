@@ -103,8 +103,6 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 - (void)loadSharableLinkForFile:(NSString *)path completion:(DBLoadShareableLinkCompletionBlock)completion;
 - (void)loadStreamableURLForFile:(NSString *)path completion:(DBLoadStreamableURLCompletionBlock)completion;
 
-- (NSUInteger)requestCount;
-
 @end
 
 

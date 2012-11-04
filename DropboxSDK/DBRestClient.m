@@ -27,7 +27,6 @@
 	NSMutableDictionary* loadRequests;
 	NSMutableDictionary* imageLoadRequests;
 	NSMutableDictionary* uploadRequests;
-	NSMutableSet *requests;
 	
 	DBSession* session;
 	NSString* userId;
@@ -66,7 +65,6 @@
         userId = theUserId;
         root = aSession.root;
         
-		requests = [[NSMutableSet alloc] init];
         loadRequests = [[NSMutableDictionary alloc] init];
         imageLoadRequests = [[NSMutableDictionary alloc] init];
         uploadRequests = [[NSMutableDictionary alloc] init];
@@ -102,17 +100,12 @@
 
 - (void)waitUntilAllRequestsAreCompleted {
 	dispatch_semaphore_wait(_completionSemaphore, DISPATCH_TIME_FOREVER);
-	[requestQueue cancelAllOperations]; // Cancel all operations submitted after the completion signal
+	[requestQueue waitUntilAllOperationsAreFinished];
 }
 
 - (void)cancelAllRequests {
 	[requestQueue cancelAllOperations];
 
-	@synchronized (requests) {
-		for (DBRequest* request in requests) [request cancel];
-		[requests removeAllObjects];
-	}
-	
 	@synchronized (loadRequests) {
 		for (DBRequest* request in [loadRequests allValues]) [request cancel];
 		[loadRequests removeAllObjects];
@@ -139,13 +132,6 @@
 - (void)setMaxConcurrentRequests:(NSInteger)maxConcurrentRequests {
 	requestQueue.maxConcurrentOperationCount = maxConcurrentRequests;
 }
-
-//- (DBRequest *)requestWithURLRequest:(NSURLRequest *)urlRequest selector:(SEL)selector {
-//    DBRequest* request = [[DBRequest alloc] initWithURLRequest:urlRequest andInformTarget:self selector:selector];
-//	[requestQueue addOperation:request];
-//	
-//	return request;
-//}
 
 - (void)loadMetadata:(NSString*)path withParams:(NSDictionary *)params completion:(DBMetadataCompletionBlock)completion {
     NSString* fullPath = [NSString stringWithFormat:@"/metadata/%@%@", root, path];
@@ -190,19 +176,11 @@
 				}
 			});
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     NSMutableDictionary *userInfo = [NSMutableDictionary dictionaryWithObject:path forKey:@"path"];
     if (params) [userInfo addEntriesFromDictionary:params];
     operation.userInfo = userInfo;
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
 	
 	[requestQueue addOperation:operation];
 }
@@ -267,18 +245,9 @@
 				}
 			});
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = params;
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -629,18 +598,9 @@
 			
 			if (completion) completion(nil, revisions);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = [NSDictionary dictionaryWithObjectsAndKeys:path, @"path", [NSNumber numberWithInt:limit], @"limit", nil];
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -667,18 +627,9 @@
 			}
 			if (completion) completion(nil, metadata);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = [NSDictionary dictionaryWithObjectsAndKeys:path, @"path", rev, @"rev", nil];
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -706,15 +657,7 @@
 			
 			if (completion) completion(nil);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
 	
 	[requestQueue addOperation:operation];
 }
@@ -743,18 +686,9 @@
 			
 			if (completion) completion(nil);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = params;
-
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -782,18 +716,9 @@
 			
 			if (completion) completion(nil, copyRef);
 		}
-
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
     
     operation.userInfo = [NSDictionary dictionaryWithObject:path forKey:@"path"];
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -822,18 +747,9 @@
 			
 			if (completion) completion(nil, metadata);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = params;
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -860,18 +776,9 @@
 			
 			if (completion) completion(nil);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = params;
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -900,18 +807,9 @@
 			
 			if (completion) completion(nil, metadata);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = params;
-
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -938,18 +836,9 @@
 			
 			if (completion) completion(nil, accountInfo);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 
     operation.userInfo = [NSDictionary dictionaryWithObjectsAndKeys:root, @"root", nil];
-	
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -990,19 +879,9 @@
 			
 			if (completion) completion(nil, results);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
-		
 	}];
 	
     operation.userInfo = [NSDictionary dictionaryWithObjectsAndKeys:path, @"path", keyword, @"keyword", nil];
-
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -1029,18 +908,9 @@
 		
 			if (completion) completion(nil, sharableLink);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo =  [NSDictionary dictionaryWithObject:path forKey:@"path"];
-
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
 
@@ -1066,25 +936,11 @@
 			}
 			if (completion) completion(nil, url);
 		}
-		
-		@synchronized (requests) {
-			[requests removeObject:request];
-		}
 	}];
 	
     operation.userInfo = [NSDictionary dictionaryWithObject:path forKey:@"path"];
-
-	@synchronized (requests) {
-		[requests addObject:operation];
-	}
-	
 	[requestQueue addOperation:operation];
 }
-
-- (NSUInteger)requestCount {
-	return [requests count] + [loadRequests count] + [imageLoadRequests count] + [uploadRequests count];
-}
-
 
 #pragma mark private methods
 
