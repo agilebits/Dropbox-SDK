@@ -76,18 +76,22 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
     [urlConnection cancel];
 }
 
-- (void)networkRequestStopped {
-	if ([self error] && _failureBlock) {
-		_failureBlock(self);
-	}
-	else if (_completionBlock) {
-		_completionBlock(self);
-	}
+- (void)networkRequestStopped 
+{
+    if (!_cancelled)  {
+    	if ([self error] && _failureBlock) {
+    		_failureBlock(self);
+    	}
+    	else if (_completionBlock) {
+    		_completionBlock(self);
+    	}
 	
-	_failureBlock = nil;
-	_completionBlock = nil;
+    	_failureBlock = nil;
+    	_completionBlock = nil;
 	
-    [dbNetworkRequestDelegate networkRequestStopped];
+        [dbNetworkRequestDelegate networkRequestStopped];
+    }
+    
 	CFRunLoopStop(CFRunLoopGetCurrent());
 }
 

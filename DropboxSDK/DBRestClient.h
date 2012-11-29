@@ -38,6 +38,7 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 
 @property (nonatomic) NSInteger maxConcurrentRequests;
 @property (readonly) BOOL active;
+@property (atomic) BOOL canceled;
 
 - (id)initWithSession:(DBSession*)session;
 - (id)initWithSession:(DBSession *)session userId:(NSString *)userId;

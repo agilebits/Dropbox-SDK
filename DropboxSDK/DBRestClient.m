@@ -104,6 +104,7 @@
 }
 
 - (void)cancelAllRequests {
+	self.canceled = YES;
 	[requestQueue cancelAllOperations];
 
 	@synchronized (loadRequests) {
@@ -138,6 +139,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params];
     
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.statusCode == 304) {
 			if ([_delegate respondsToSelector:@selector(restClient:metadataUnchangedAtPath:)]) {
 				NSString* path = [request.userInfo objectForKey:@"path"];
@@ -207,6 +210,8 @@
     NSMutableURLRequest *urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params method:@"POST"];
 	
     DBRequest* operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:loadDeltaFailedWithError:)]) {
@@ -260,6 +265,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIContentHost path:fullPath parameters:params];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+		
 		NSString* path = [[request.userInfo objectForKey:@"path"] copy];
 		
 		if (request.error) {
@@ -375,6 +382,8 @@
     
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIContentHost path:fullPath parameters:params];
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:loadThumbnailFailedWithError:)]) {
@@ -494,6 +503,8 @@
     
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
 		
 		if (!result) {
@@ -574,6 +585,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params];
     
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		NSArray *resp = [request parseResponseAsType:[NSArray class]];
 		
 		if (!resp) {
@@ -612,6 +625,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params];
     
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		NSDictionary *dict = [request parseResponseAsType:[NSDictionary class]];
 		
 		if (!dict) {
@@ -640,6 +655,8 @@
     NSMutableURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:@"/fileops/move" parameters:params method:@"POST"];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:movePathFailedWithError:)]) {
@@ -669,6 +686,8 @@
     NSMutableURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:@"/fileops/copy" parameters:params method:@"POST"];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:copyPathFailedWithError:)]) {
@@ -699,6 +718,8 @@
     NSMutableURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:nil method:@"POST"];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
 		if (!result) {
 			[self checkForAuthenticationFailure:request];
@@ -729,6 +750,8 @@
     NSMutableURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params method:@"POST"];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		NSDictionary *result = [request parseResponseAsType:[NSDictionary class]];
 		if (!result) {
 			[self checkForAuthenticationFailure:request];
@@ -760,6 +783,8 @@
     NSMutableURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:@"/fileops/delete" parameters:params method:@"POST"];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:deletePathFailedWithError:)]) {
@@ -790,6 +815,8 @@
     NSMutableURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params method:@"POST"];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:createFolderFailedWithError:)]) {
@@ -819,6 +846,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:@"/account/info" parameters:nil];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:loadAccountInfoFailedWithError:)]) {
@@ -852,6 +881,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:params];
     
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:searchFailedWithError:)]) {
@@ -891,6 +922,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:nil];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:loadSharableLinkFailedWithError:)]) {
@@ -920,6 +953,8 @@
     NSURLRequest* urlRequest = [self requestWithHost:kDBDropboxAPIHost path:fullPath parameters:nil];
 	
 	DBRequest *operation = [[DBRequest alloc] initWithURLRequest:urlRequest completionBlock:^(DBRequest *request) {
+		if (self.canceled) return;
+
 		if (request.error) {
 			[self checkForAuthenticationFailure:request];
 			if ([_delegate respondsToSelector:@selector(restClient:loadStreamableURLFailedWithError:)]) {
