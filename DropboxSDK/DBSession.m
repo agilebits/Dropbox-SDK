@@ -37,6 +37,9 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
 
 
 @interface DBSession () {
+	BOOL _credentialStoreReady;
+	NSString *_key;
+	NSString *_secret;
 	MPOAuthCredentialConcreteStore *_nilUserStore;
 }
 
@@ -50,6 +53,8 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
 
 @implementation DBSession
 
+@synthesize root = _root;
+
 + (DBSession *)sharedSession {
     return _sharedSession;
 }
@@ -59,51 +64,54 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
     _sharedSession = session;
 }
 
-- (id)initWithAppKey:(NSString *)key appSecret:(NSString *)secret root:(NSString *)theRoot {
+- (id)initWithAppKey:(NSString *)key appSecret:(NSString *)secret root:(NSString *)root {
     if ((self = [super init])) {
-        
-        baseCredentials = 
-            [[NSDictionary alloc] initWithObjectsAndKeys:
-                key, kMPOAuthCredentialConsumerKey,
-                secret, kMPOAuthCredentialConsumerSecret, 
-                kMPOAuthSignatureMethodPlaintext, kMPOAuthSignatureMethod, nil];
-                
-        credentialStores = [NSMutableDictionary new];
-        
-        NSDictionary *oldSavedCredentials =
-            [[NSUserDefaults standardUserDefaults] objectForKey:kDBDropboxSavedCredentialsOld];
-        if (oldSavedCredentials) {
-            if ([key isEqual:[oldSavedCredentials objectForKey:kMPOAuthCredentialConsumerKey]]) {
-                NSString *token = [oldSavedCredentials objectForKey:kMPOAuthCredentialAccessToken];
-                NSString *secret = [oldSavedCredentials objectForKey:kMPOAuthCredentialAccessTokenSecret];
-                [self setAccessToken:token accessTokenSecret:secret forUserId:kDBDropboxUnknownUserId];
-            }
-        }
-        
-        NSDictionary *savedCredentials = [self savedCredentials];
-        if (savedCredentials != nil) {
-            if ([key isEqualToString:[savedCredentials objectForKey:kMPOAuthCredentialConsumerKey]]) {
-            
-                NSArray *allUserCredentials = [savedCredentials objectForKey:kDBDropboxUserCredentials];
-                for (NSDictionary *userCredentials in allUserCredentials) {
-                    NSString *userId = [userCredentials objectForKey:kDBDropboxUserId];
-                    NSString *token = [userCredentials objectForKey:kMPOAuthCredentialAccessToken];
-                    NSString *secret = [userCredentials objectForKey:kMPOAuthCredentialAccessTokenSecret];
-                    [self setAccessToken:token accessTokenSecret:secret forUserId:userId];
-                }
-            } else {
-                [self clearSavedCredentials];
-            }
-        }
-        
-        root = theRoot;
+		_key = key;
+		_secret = secret;
+		_root = root;
     }
     return self;
 }
 
 
-@synthesize root;
-@synthesize delegate;
+- (void)prepareCredentialStore {
+	if (_credentialStoreReady) return;
+
+	baseCredentials = [[NSDictionary alloc] initWithObjectsAndKeys:
+					   _key, kMPOAuthCredentialConsumerKey,
+					   _secret, kMPOAuthCredentialConsumerSecret,
+					   kMPOAuthSignatureMethodPlaintext, kMPOAuthSignatureMethod, nil];
+	
+	credentialStores = [NSMutableDictionary new];
+	
+	
+	NSDictionary *oldSavedCredentials = [[NSUserDefaults standardUserDefaults] objectForKey:kDBDropboxSavedCredentialsOld];
+	if (oldSavedCredentials) {
+		if ([_key isEqual:[oldSavedCredentials objectForKey:kMPOAuthCredentialConsumerKey]]) {
+			NSString *token = [oldSavedCredentials objectForKey:kMPOAuthCredentialAccessToken];
+			NSString *secret = [oldSavedCredentials objectForKey:kMPOAuthCredentialAccessTokenSecret];
+			[self setAccessToken:token accessTokenSecret:secret forUserId:kDBDropboxUnknownUserId];
+		}
+	}
+	
+	NSDictionary *savedCredentials = [self savedCredentials];
+	if (savedCredentials != nil) {
+		if ([_key isEqualToString:[savedCredentials objectForKey:kMPOAuthCredentialConsumerKey]]) {
+            
+			NSArray *allUserCredentials = [savedCredentials objectForKey:kDBDropboxUserCredentials];
+			for (NSDictionary *userCredentials in allUserCredentials) {
+				NSString *userId = [userCredentials objectForKey:kDBDropboxUserId];
+				NSString *token = [userCredentials objectForKey:kMPOAuthCredentialAccessToken];
+				NSString *secret = [userCredentials objectForKey:kMPOAuthCredentialAccessTokenSecret];
+				[self setAccessToken:token accessTokenSecret:secret forUserId:userId];
+			}
+		} else {
+			[self clearSavedCredentials];
+		}
+	}
+	
+	_credentialStoreReady = YES;
+}
 
 - (void)updateAccessToken:(NSString *)token accessTokenSecret:(NSString *)secret forUserId:(NSString *)userId {
     [self setAccessToken:token accessTokenSecret:secret forUserId:userId];
@@ -113,8 +121,7 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
 - (void)setAccessToken:(NSString *)token accessTokenSecret:(NSString *)secret forUserId:(NSString *)userId {
     MPOAuthCredentialConcreteStore *credentialStore = [credentialStores objectForKey:userId];
     if (!credentialStore) {
-        credentialStore = 
-            [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
+        credentialStore = [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
         [credentialStores setObject:credentialStore forKey:userId];
         
         if (![userId isEqual:kDBDropboxUnknownUserId] && [credentialStores objectForKey:kDBDropboxUnknownUserId]) {
@@ -122,44 +129,70 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
             [credentialStores removeObjectForKey:kDBDropboxUnknownUserId];
         }
     }
+	
     credentialStore.accessToken = token;
     credentialStore.accessTokenSecret = secret;
 }
 
 - (BOOL)isLinked {
-    return [credentialStores count] != 0;
+	@synchronized (self) {
+		[self prepareCredentialStore];
+		
+		return [credentialStores count] != 0;
+	}
 }
 
 - (void)unlinkAll {
-    [credentialStores removeAllObjects];
-    [self clearSavedCredentials];
+	@synchronized (self) {
+		[self prepareCredentialStore];
+
+		[credentialStores removeAllObjects];
+		[self clearSavedCredentials];
+	}
 }
 
 - (void)unlinkUserId:(NSString *)userId {
-    [credentialStores removeObjectForKey:userId];
-    [self saveCredentials];
+	@synchronized (self) {
+		[self prepareCredentialStore];
+
+		[credentialStores removeObjectForKey:userId];
+		[self saveCredentials];
+	}
 }
 
 - (MPOAuthCredentialConcreteStore *)credentialStoreForUserId:(NSString *)userId {
-    if (!userId) {
-		if (!_nilUserStore) _nilUserStore = [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
-		return _nilUserStore;
-    }
-    return [credentialStores objectForKey:userId];
+	@synchronized (self) {
+		[self prepareCredentialStore];
+
+		if (!userId) {
+			if (!_nilUserStore) _nilUserStore = [[MPOAuthCredentialConcreteStore alloc] initWithCredentials:baseCredentials];
+			return _nilUserStore;
+		}
+		return [credentialStores objectForKey:userId];
+	}
 }
 
 - (NSArray *)userIds {
-    return [credentialStores allKeys];
+	@synchronized (self) {
+		[self prepareCredentialStore];
+
+		return [credentialStores allKeys];
+	}
 }
 
 
 #pragma mark private methods
 
 - (NSDictionary *)savedCredentials {
+	if ([self.credentialsDelegate respondsToSelector:@selector(dropboxSessionLoadCredentials:)]) {
+		return [self.credentialsDelegate dropboxSessionLoadCredentials:self];
+	}
+
     return [[NSUserDefaults standardUserDefaults] objectForKey:kDBDropboxSavedCredentials];
 }
 
-- (void)saveCredentials {
+- (void)saveCredentials
+{
     NSMutableDictionary *credentials = [NSMutableDictionary dictionaryWithDictionary:baseCredentials];
     NSMutableArray *allUserCredentials = [NSMutableArray array];
     for (NSString *userId in [credentialStores allKeys]) {
@@ -171,13 +204,22 @@ static NSString *kDBDropboxUserId = @"kDBDropboxUserId";
         [allUserCredentials addObject:userCredentials];
     }
     [credentials setObject:allUserCredentials forKey:kDBDropboxUserCredentials];
-    
-    [[NSUserDefaults standardUserDefaults] setObject:credentials forKey:kDBDropboxSavedCredentials];
-    [[NSUserDefaults standardUserDefaults] removeObjectForKey:kDBDropboxSavedCredentialsOld];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+
+    if ([self.credentialsDelegate respondsToSelector:@selector(dropboxSession:saveCredentials:)]) {
+		[self.credentialsDelegate dropboxSession:self saveCredentials:credentials];
+	}
+	else {
+		[[NSUserDefaults standardUserDefaults] setObject:credentials forKey:kDBDropboxSavedCredentials];
+		[[NSUserDefaults standardUserDefaults] removeObjectForKey:kDBDropboxSavedCredentialsOld];
+		[[NSUserDefaults standardUserDefaults] synchronize];
+	}
 }
 
 - (void)clearSavedCredentials {
+	if ([self.credentialsDelegate respondsToSelector:@selector(dropboxSessionRemoveCredentials:)]) {
+		[self.credentialsDelegate dropboxSessionRemoveCredentials:self];
+	}
+	
     [[NSUserDefaults standardUserDefaults] removeObjectForKey:kDBDropboxSavedCredentials];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }

@@ -22,6 +22,7 @@ extern NSString *kDBProtocolHTTPS;
 extern NSString *kDBDropboxUnknownUserId;
 
 @protocol DBSessionDelegate;
+@protocol DBSessionCredentialsDelegate;
 
 
 /*  Creating and setting the shared DBSession should be done before any other Dropbox objects are
@@ -30,8 +31,6 @@ extern NSString *kDBDropboxUnknownUserId;
     NSDictionary *baseCredentials;
     NSMutableDictionary *credentialStores;
     MPOAuthCredentialConcreteStore *anonymousStore;
-    NSString *root;
-    id<DBSessionDelegate> __unsafe_unretained delegate;
 }
 
 + (DBSession*)sharedSession;
@@ -48,13 +47,24 @@ extern NSString *kDBDropboxUnknownUserId;
 
 @property (nonatomic, readonly) NSString *root;
 @property (nonatomic, readonly) NSArray *userIds;
-@property (nonatomic, assign) id<DBSessionDelegate> delegate;
+
+@property (nonatomic, weak) id<DBSessionDelegate> delegate;
+@property (nonatomic, weak) id<DBSessionCredentialsDelegate> credentialsDelegate;
 
 @end
 
 
-@protocol DBSessionDelegate
+@protocol DBSessionDelegate <NSObject>
 
 - (void)sessionDidReceiveAuthorizationFailure:(DBSession *)session userId:(NSString *)userId;
+
+@end
+
+@protocol DBSessionCredentialsDelegate <NSObject>
+
+- (NSDictionary *)dropboxSessionLoadCredentials:(DBSession *)session;
+- (void)dropboxSession:(DBSession *)session saveCredentials:(NSDictionary *)credentials;
+- (void)dropboxSessionRemoveCredentials:(DBSession *)session;
+
 
 @end
