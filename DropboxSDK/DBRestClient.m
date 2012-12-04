@@ -324,10 +324,13 @@
 	}];
 	
 
+	
     operation.resultFilename = destPath;
+	
+	__weak DBRequest *request = operation;
     operation.downloadProgressBlock = ^(DBRequest *r) {
 		if ([_delegate respondsToSelector:@selector(restClient:loadProgress:forFile:)]) {
-			[_delegate restClient:self loadProgress:operation.downloadProgress forFile:[r.resultFilename copy]];
+			[_delegate restClient:self loadProgress:request.downloadProgress forFile:[r.resultFilename copy]];
 		}
 	};
 	
@@ -535,12 +538,13 @@
 		}
 	}];
 	
+	__weak DBRequest *request = operation;
     operation.uploadProgressBlock = ^(DBRequest *r) {
-		NSString* sourcePath = [(NSDictionary*)operation.userInfo objectForKey:@"sourcePath"];
-		NSString* destPath = [operation.userInfo objectForKey:@"destinationPath"];
+		NSString* sourcePath = [(NSDictionary*)request.userInfo objectForKey:@"sourcePath"];
+		NSString* destPath = [request.userInfo objectForKey:@"destinationPath"];
 		
 		if ([_delegate respondsToSelector:@selector(restClient:uploadProgress:forFile:from:)]) {
-			[_delegate restClient:self uploadProgress:operation.uploadProgress forFile:destPath from:sourcePath];
+			[_delegate restClient:self uploadProgress:request.uploadProgress forFile:destPath from:sourcePath];
 		}
 	};
 	

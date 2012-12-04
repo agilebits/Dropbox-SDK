@@ -27,7 +27,7 @@ NSString *kDBRootAppFolder = @"sandbox";
 NSString *kDBProtocolHTTPS = @"https";
 NSString *kDBDropboxUnknownUserId = @"unknown";
 
-static NSString *kDBProtocolDropbox = @"dbapi-1";
+// static NSString *kDBProtocolDropbox = @"dbapi-1";
 
 static DBSession *_sharedSession = nil;
 static NSString *kDBDropboxSavedCredentialsOld = @"kDBDropboxSavedCredentialsKey";

@@ -7,4 +7,4 @@
 //
 
 // Taken from three20 (http://three20.info/)
-#define DB_FIX_CATEGORY_BUG(name) @interface DB_FIX_CATEGORY_BUG##name @end @implementation DB_FIX_CATEGORY_BUG##name @end
+#define DB_FIX_CATEGORY_BUG(name) @interface DB_FIX_CATEGORY_BUG##name : NSObject @end @implementation DB_FIX_CATEGORY_BUG##name @end
