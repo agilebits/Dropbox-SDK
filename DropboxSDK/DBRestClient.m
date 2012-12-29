@@ -316,11 +316,9 @@
 			}
 		}
 		
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-			@synchronized (loadRequests) {
-				[loadRequests removeObjectForKey:path];
-			}
-		});
+		@synchronized (loadRequests) {
+			[loadRequests removeObjectForKey:path];
+		}
 	}];
 	
 
