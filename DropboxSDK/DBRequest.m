@@ -67,6 +67,9 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
     if ((self = [super init])) {
         request = aRequest;
 		_completionBlock = completionBlock;
+		
+		[super setThreadPriority:0.25];
+		[super setQueuePriority:NSOperationQueuePriorityLow];
     }
 	
     return self;

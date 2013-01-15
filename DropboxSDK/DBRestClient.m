@@ -71,7 +71,7 @@
 		
 		requestQueue = [[NSOperationQueue alloc] init];
 		requestQueue.name = @"dropbox-request-queue";
-		requestQueue.maxConcurrentOperationCount = 8;
+		requestQueue.maxConcurrentOperationCount = 4;
 		
 		_completionSemaphore = dispatch_semaphore_create(0);
     }
@@ -159,7 +159,7 @@
 		} 
 		else {
 			NSDictionary* result = (NSDictionary*)[request resultJSON];
-			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
 				DBMetadata* metadata = [[DBMetadata alloc] initWithDictionary:result];
 				if (metadata) {
 					if ([_delegate respondsToSelector:@selector(restClient:loadedMetadata:)]) {
@@ -221,7 +221,7 @@
 			if (completion) completion(request.error, nil, NO, nil, NO);
 		}
 		else {
-			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
 				NSDictionary* result = [request parseResponseAsType:[NSDictionary class]];
 				if (result) {
 					NSArray *entryArrays = [result objectForKey:@"entries"];
