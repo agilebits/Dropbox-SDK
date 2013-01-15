@@ -10,6 +10,7 @@
 
 @interface DBMetadata () {
 	NSMutableDictionary *_contentsByFilename;
+	NSMutableArray *_contents;
 }
 
 @property (nonatomic, strong) NSDictionary * dict;
@@ -17,8 +18,6 @@
 @end
 
 @implementation DBMetadata
-
-@synthesize dict;
 
 + (NSDateFormatter*)dateFormatter {
     NSMutableDictionary* dictionary = [[NSThread currentThread] threadDictionary];
@@ -39,14 +38,14 @@
 
 - (id)initWithDictionary:(NSDictionary*)dictionary {
     if ((self = [super init])) {
-		dict = dictionary;
+		_dict = dictionary;
 	}
 
 	return self;
 }
 
 - (NSDictionary *)dictionary {
-	return dict;
+	return _dict;
 }
 
 - (DBMetadata *)metadataForFilename:(NSString *)filename {
@@ -63,16 +62,16 @@
 
 
 - (BOOL)thumbnailExists {
-	return [[dict objectForKey:@"thumb_exists"] boolValue];
+	return [[_dict objectForKey:@"thumb_exists"] boolValue];
 }
 
 - (long long)totalBytes {
-	return [[dict objectForKey:@"bytes"] longLongValue];
+	return [[_dict objectForKey:@"bytes"] longLongValue];
 }
 
 - (NSDate *)lastModifiedDate {
-	if ([dict objectForKey:@"modified"]) {
-		return [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"modified"]];
+	if ([_dict objectForKey:@"modified"]) {
+		return [[DBMetadata dateFormatter] dateFromString:[_dict objectForKey:@"modified"]];
 	}
 
 	return nil;
@@ -82,61 +81,76 @@
 	if (_cachedClientMtime) return _cachedClientMtime;
 	
  	// file's mtime for display purposes only
-	if ([dict objectForKey:@"client_mtime"]) {
-		_cachedClientMtime = [[DBMetadata dateFormatter] dateFromString:[dict objectForKey:@"client_mtime"]];
+	if ([_dict objectForKey:@"client_mtime"]) {
+		_cachedClientMtime = [[DBMetadata dateFormatter] dateFromString:[_dict objectForKey:@"client_mtime"]];
 	}
 	
 	return _cachedClientMtime;
 }
 
 - (NSString *)path {
-	return [dict objectForKey:@"path"];
+	return [_dict objectForKey:@"path"];
 }
 
 - (BOOL)isDirectory {
-	return [[dict objectForKey:@"is_dir"] boolValue];
+	return [[_dict objectForKey:@"is_dir"] boolValue];
 }
 
 - (NSArray *)contents {
-	if (![dict objectForKey:@"contents"]) return nil;
+	if (_contents) return _contents;
+	if (![_dict objectForKey:@"contents"]) return nil;
 
-	NSArray *subfileDicts = [dict objectForKey:@"contents"];
-	NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity:[subfileDicts count]];
+	NSArray *subfileDicts = [_dict objectForKey:@"contents"];
+	_contents = [[NSMutableArray alloc] initWithCapacity:[subfileDicts count]];
 	for (NSDictionary *subfileDict in subfileDicts) {
 		DBMetadata *subfile = [[DBMetadata alloc] initWithDictionary:subfileDict];
-		[result addObject:subfile];
+		[_contents addObject:subfile];
 	}
 
-	return result;
+	return _contents;
+}
+
+- (void)setContents:(NSArray *)contents {
+	_contents = [contents mutableCopy];
+	
+	NSMutableArray *dicts = [[NSMutableArray alloc] initWithCapacity:[_contents count]];
+	for (DBMetadata *metadata in _contents) {
+		[dicts addObject:[metadata dictionary]];
+	}
+	
+	NSMutableDictionary *mutableDict = [_dict mutableCopy];
+	mutableDict[@"contents"] = dicts;
+	
+	_dict = mutableDict;
 }
 
 - (NSString *)hash {
-	return [dict objectForKey:@"hash"];
+	return [_dict objectForKey:@"hash"];
 }
 
 - (NSString *)humanReadableSize {
-	return [dict objectForKey:@"size"];
+	return [_dict objectForKey:@"size"];
 }
 
 - (NSString *)root {
-	return [dict objectForKey:@"root"];
+	return [_dict objectForKey:@"root"];
 }
 
 - (NSString *)icon {
-	return [dict objectForKey:@"icon"];
+	return [_dict objectForKey:@"icon"];
 }
 
 - (NSString *)rev {
-	return [dict objectForKey:@"rev"];
+	return [_dict objectForKey:@"rev"];
 }
 
 - (long long)revision {
  	// Deprecated; will be removed in version 2. Use rev whenever possible
-	return [[dict objectForKey:@"revision"] longLongValue];
+	return [[_dict objectForKey:@"revision"] longLongValue];
 }
 
 - (BOOL)isDeleted {
-	return [[dict objectForKey:@"is_deleted"] boolValue];
+	return [[_dict objectForKey:@"is_deleted"] boolValue];
 }
 
 - (BOOL)isEqual:(id)object {
@@ -154,13 +168,13 @@
 
 - (id)initWithCoder:(NSCoder*)coder {
     if ((self = [super init])) {
-		dict = [coder decodeObjectForKey:@"dict"];
+		_dict = [coder decodeObjectForKey:@"dict"];
     }
     return self;
 }
 
 - (void)encodeWithCoder:(NSCoder*)coder {
-	[coder encodeObject:dict forKey:@"dict"];
+	[coder encodeObject:_dict forKey:@"dict"];
 }
 
 @end

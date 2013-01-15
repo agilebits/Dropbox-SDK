@@ -20,7 +20,7 @@
 @property (nonatomic, readonly) NSDate* clientMtime;
 @property (nonatomic, readonly) NSString* path;
 @property (nonatomic, readonly) BOOL isDirectory;
-@property (nonatomic, readonly) NSArray* contents;
+@property (nonatomic) NSArray* contents;
 @property (nonatomic, readonly) NSString* hash;
 @property (nonatomic, readonly) NSString* humanReadableSize;
 @property (nonatomic, readonly) NSString* root;
