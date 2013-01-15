@@ -51,7 +51,7 @@ typedef void (^DBRequestBlock)(DBRequest *request);
 @property (nonatomic, readonly) NSObject* resultJSON;
 @property (nonatomic, readonly) NSError* error;
 
-@property (nonatomic, readonly) BOOL cancelled;
+@property (nonatomic, readonly, getter = isCancelled) BOOL cancelled;
 
 // NSOperation methods
 - (void)main;

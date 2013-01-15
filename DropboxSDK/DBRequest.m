@@ -137,7 +137,10 @@ id<DBNetworkRequestDelegate> dbNetworkRequestDelegate = nil;
 }
 
 - (void)cancel {
+	[self willChangeValueForKey:@"isCancelled"];
 	_cancelled = YES;
+	[super cancel];
+	[self didChangeValueForKey:@"isCancelled"];
 
 	_failureBlock = nil;
 	_completionBlock = nil;
