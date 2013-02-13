@@ -34,10 +34,10 @@ typedef void (^DBRequestBlock)(DBRequest *request);
 @property (nonatomic) NSString* resultFilename; // The file to put the HTTP body in, otherwise body is stored in resultData
 @property (nonatomic) NSDictionary* userInfo;
 
-@property (nonatomic, strong) DBRequestBlock completionBlock;
-@property (nonatomic, strong) DBRequestBlock failureBlock;
-@property (nonatomic, strong) DBRequestBlock uploadProgressBlock;
-@property (nonatomic, strong) DBRequestBlock downloadProgressBlock;
+@property (nonatomic, copy) DBRequestBlock completionBlock;
+@property (nonatomic, copy) DBRequestBlock failureBlock;
+@property (nonatomic, copy) DBRequestBlock uploadProgressBlock;
+@property (nonatomic, copy) DBRequestBlock downloadProgressBlock;
 
 @property (nonatomic, readonly) NSURLRequest* request;
 @property (nonatomic, readonly) NSHTTPURLResponse* response;
