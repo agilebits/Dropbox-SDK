@@ -19,7 +19,7 @@ extern NSString * const MPOAuthCredentialAccessTokenSecretKey;
 extern NSString * const MPOAuthCredentialSessionHandleKey;
 
 @interface MPOAuthCredentialConcreteStore ()
-@property NSMutableDictionary *store;
+@property (nonatomic) NSMutableDictionary *store;
 @end
 
 @implementation MPOAuthCredentialConcreteStore
