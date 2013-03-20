@@ -51,6 +51,7 @@ typedef void (^DBLoadStreamableURLCompletionBlock)(NSError *error, NSURL *URL);
 
 /* Loads metadata for the object at the given root/path and returns the result to the delegate as a 
    dictionary */
+- (void)loadMetadata:(NSString*)path withParams:(NSDictionary *)params completion:(DBMetadataCompletionBlock)completion;
 - (void)loadMetadata:(NSString*)path withHash:(NSString*)hash completion:(DBMetadataCompletionBlock)completion;
 - (void)loadMetadata:(NSString*)path completion:(DBMetadataCompletionBlock)completion;
 
